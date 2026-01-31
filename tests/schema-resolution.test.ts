@@ -37,6 +37,12 @@ describe('Schema Resolution', () => {
   const tmpBad = path.join(process.cwd(), 'src', '__test_schema_bad.json');
   const tmpMalformed = path.join(process.cwd(), 'src', '__test_schema_malformed.json');
 
+  const baseOptions = {
+    role: 'test',
+    task: 'testing',
+    instructions: 'please follow the test instructions',
+  };
+
   afterEach(() => {
     vi.restoreAllMocks();
     try {
@@ -52,14 +58,14 @@ describe('Schema Resolution', () => {
 
   it('SCHEMA-01: --structured without schema file returns default schema', () => {
     const defaultSchema = { a: 1 };
-    const out = helpers.resolveOutputSchema({ structured: true }, defaultSchema);
+    const out = helpers.resolveOutputSchema({ ...baseOptions, structured: true }, defaultSchema);
     expect(out).toEqual(defaultSchema);
   });
 
   it('SCHEMA-02: valid --schema-file inside project parsed as object', () => {
     const obj = { hello: 'world' };
     fs.writeFileSync(tmpSchema, JSON.stringify(obj, null, 2));
-    const out = helpers.resolveOutputSchema({ schemaFile: tmpSchema }, {});
+    const out = helpers.resolveOutputSchema({ ...baseOptions, schemaFile: tmpSchema }, {});
     expect(out).toEqual(obj);
   });
 
@@ -67,9 +73,9 @@ describe('Schema Resolution', () => {
     // Spy on path.resolve to simulate resolving outside cwd
     const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/schema.json');
     try {
-      expect(() => helpers.resolveOutputSchema({ schemaFile: 'schema.json' }, {})).toThrow(
-        'Schema path must be inside project directory.',
-      );
+      expect(() =>
+        helpers.resolveOutputSchema({ ...baseOptions, schemaFile: 'schema.json' }, {}),
+      ).toThrow('Schema path must be inside project directory.');
     } finally {
       spy.mockRestore();
     }
@@ -77,14 +83,14 @@ describe('Schema Resolution', () => {
 
   it('SCHEMA-04: schema file that parses but is not object throws', () => {
     fs.writeFileSync(tmpBad, JSON.stringify([1, 2, 3]));
-    expect(() => helpers.resolveOutputSchema({ schemaFile: tmpBad }, {})).toThrow(
+    expect(() => helpers.resolveOutputSchema({ ...baseOptions, schemaFile: tmpBad }, {})).toThrow(
       /must contain a JSON object/,
     );
   });
 
   it('SCHEMA-05: missing schema file (ENOENT) yields descriptive error', () => {
     const missing = path.join(process.cwd(), 'src', '__this_file_does_not_exist.json');
-    expect(() => helpers.resolveOutputSchema({ schemaFile: missing }, {})).toThrow(
+    expect(() => helpers.resolveOutputSchema({ ...baseOptions, schemaFile: missing }, {})).toThrow(
       new RegExp(`Failed to read or parse schema file at ${missing}`),
     );
   });
@@ -92,7 +98,7 @@ describe('Schema Resolution', () => {
   it('SCHEMA-06: malformed JSON parse error mentions path', () => {
     fs.writeFileSync(tmpMalformed, '{ not: valid json }');
     try {
-      helpers.resolveOutputSchema({ schemaFile: tmpMalformed }, {});
+      helpers.resolveOutputSchema({ ...baseOptions, schemaFile: tmpMalformed }, {});
       throw new Error('Expected parse to throw');
     } catch (err) {
       expect(String(err)).toMatch(
@@ -104,7 +110,7 @@ describe('Schema Resolution', () => {
   });
 
   it('SCHEMA-07: returns undefined when neither structured nor schemaFile set', () => {
-    const out = helpers.resolveOutputSchema({}, {});
+    const out = helpers.resolveOutputSchema({ ...baseOptions }, {});
     expect(out).toBeUndefined();
   });
 });
