@@ -1,0 +1,37 @@
+{
+  "name": "codex-delegate",
+  "version": "0.0.1",
+  "description": "A quick and dirty cli tool that enables easy delegation of tasks to codex sub-agents.",
+  "main": "src/codex-delegate.ts",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "vitest": "^1.3.0",
+    "typescript": "^5.1.6",
+    "@types/node": "^20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h-arnold/codex-delegate.git"
+  },
+  "keywords": [
+    "Codex",
+    "delegate",
+    "subagent",
+    "npm",
+    "cli"
+  ],
+  "author": "Hamish Arnold",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/h-arnold/codex-delegate/issues"
+  },
+  "homepage": "https://github.com/h-arnold/codex-delegate#readme"
+}
