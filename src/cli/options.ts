@@ -352,6 +352,10 @@ function parseArgs(argv: string[]): DelegateOptions {
 
   for (let i = 0; i < argv.length; ) {
     const arg = argv[i];
+
+    // Handle immediate flags like --help, which will exit the process.
+    handleImmediateFlag(arg);
+
     const key = ARG_ALIASES[arg];
     if (!key) {
       i++;
@@ -359,10 +363,6 @@ function parseArgs(argv: string[]): DelegateOptions {
     }
 
     const value = argv[i + 1];
-    if (handleImmediateFlag(arg)) {
-      i++;
-      continue;
-    }
 
     if (isBooleanOption(key)) {
       i += applyBooleanOption(options, key, value);

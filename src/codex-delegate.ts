@@ -10,7 +10,6 @@ import {
   isOption,
   parseArgs,
   parseBoolean,
-  REASONING_LEVELS,
   type ReasoningLevel,
   validateOptions,
 } from './cli/options.js';
@@ -79,7 +78,8 @@ async function run(): Promise<void> {
   // Ensure the reasoning option is narrowed to the allowed literal union before
   // passing it into the Codex API.
   let reasoningArg: ReasoningLevel | undefined;
-  if (options.reasoning && REASONING_LEVELS.includes(options.reasoning)) {
+  if (options.reasoning) {
+    // `validateOptions` has already confirmed that `options.reasoning` is a valid `ReasoningLevel`.
     reasoningArg = options.reasoning as ReasoningLevel;
   }
 

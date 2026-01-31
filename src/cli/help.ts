@@ -42,13 +42,13 @@ function printHelp(): void {
  * Handle flags that require immediate action and may terminate the process.
  *
  * @param {string} arg - The CLI token to evaluate (e.g. '--list-roles' or '--help').
- * @returns {boolean} Returns `false` when no immediate flag was processed. When an immediate flag is detected the function will print the requested information and call `process.exit(0)`.
+ * @returns {void} This function does not return; it exits the process if an immediate flag is found.
  * @remarks
  * This helper is used during argument parsing to implement flags that should short-circuit normal execution (listing roles, printing help).
  * @example
  * handleImmediateFlag('--help');
  */
-function handleImmediateFlag(arg: string): boolean {
+function handleImmediateFlag(arg: string): void {
   if (arg === '--list-roles') {
     const roles = listPromptRoles();
     if (roles.length === 0) {
@@ -63,8 +63,6 @@ function handleImmediateFlag(arg: string): boolean {
     printHelp();
     process.exit(0);
   }
-
-  return false;
 }
 
 export { handleImmediateFlag, printHelp };
