@@ -1,4 +1,4 @@
-import type { StreamedItem } from 'codex-sdk';
+import type { ThreadItem as StreamedItem } from '@openai/codex-sdk';
 
 /**
  * Aggregated results extracted from streamed events.

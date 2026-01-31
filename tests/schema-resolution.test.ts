@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock the codex SDK like other tests to avoid runtime import errors
-vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
+vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
   Codex: class {
     /**
      * Return a mock `startThread` implementation.
