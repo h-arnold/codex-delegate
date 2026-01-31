@@ -1,33 +1,11 @@
 import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
+import jsdoc from 'eslint-plugin-jsdoc';
 import security from 'eslint-plugin-security';
 import vitest from 'eslint-plugin-vitest';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-const supportsUnicodeSets = nodeMajor >= 20;
-const jsdoc = supportsUnicodeSets ? (await import('eslint-plugin-jsdoc')).default : undefined;
-
-const jsdocRules = jsdoc
-  ? {
-      'jsdoc/require-jsdoc': [
-        'error',
-        {
-          require: {
-            FunctionDeclaration: true,
-            MethodDefinition: true,
-            ClassDeclaration: true,
-            ArrowFunctionExpression: true,
-            FunctionExpression: true,
-          },
-        },
-      ],
-      'jsdoc/require-param': 'error',
-      'jsdoc/require-returns': 'error',
-    }
-  : {};
 
 export default tseslint.config(
   {
@@ -40,7 +18,7 @@ export default tseslint.config(
       vitest,
       security,
       import: importPlugin,
-      ...(jsdoc ? { jsdoc } : {}),
+      jsdoc,
     },
   },
   {
@@ -106,7 +84,20 @@ export default tseslint.config(
       // 'jsdoc/require-description': 'warn',
       // 'jsdoc/require-example': 'off',
 
-      ...jsdocRules,
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          require: {
+            FunctionDeclaration: true,
+            MethodDefinition: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+        },
+      ],
+      'jsdoc/require-param': 'error',
+      'jsdoc/require-returns': 'error',
 
       'import/order': [
         'error',
