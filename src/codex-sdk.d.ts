@@ -54,8 +54,17 @@ declare module '@openai/codex-sdk' {
     ): Promise<{ events: AsyncIterable<StreamedEvent> }>;
   }
 
+  /**
+   *
+   */
   export class Codex {
+    /**
+     *
+     */
     constructor();
+    /**
+     *
+     */
     startThread(opts?: {
       model?: string;
       modelReasoningEffort?: ModelReasoningEffort | undefined;

@@ -1,0 +1,8 @@
+{
+  "default": true,
+  "MD013": { "line_length": 100, "code_blocks": false },
+  "MD041": true,
+  "MD033": true,
+  "MD022": false,
+  "MD025": { "punctuation": ".,;:!?" }
+}

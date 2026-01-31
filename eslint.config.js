@@ -1,6 +1,7 @@
 import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
+import jsdoc from 'eslint-plugin-jsdoc';
 import security from 'eslint-plugin-security';
 import vitest from 'eslint-plugin-vitest';
 import globals from 'globals';
@@ -17,6 +18,7 @@ export default tseslint.config(
       vitest,
       security,
       import: importPlugin,
+      jsdoc: jsdoc,
     },
   },
   {
@@ -70,6 +72,32 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
       'no-eval': 'error',
+
+      // Recommended `eslint-plugin-jsdoc` configuration. Enable the plugin and these rules
+      // after verifying compatibility with the TypeScript setup.
+      // Install: npm i -D eslint-plugin-jsdoc
+      // Example recommended rules:
+      // 'jsdoc/require-jsdoc': ['error', { require: { FunctionDeclaration: true, MethodDefinition: true, ClassDeclaration: true, ArrowFunctionExpression: true, FunctionExpression: true } }],
+      // 'jsdoc/require-param': 'error',
+      // 'jsdoc/require-returns': 'error',
+      // Additional helpful rules you may enable (tweak severities as needed):
+      // 'jsdoc/require-description': 'warn',
+      // 'jsdoc/require-example': 'off',
+
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          require: {
+            FunctionDeclaration: true,
+            MethodDefinition: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+        },
+      ],
+      'jsdoc/require-param': 'error',
+      'jsdoc/require-returns': 'error',
 
       'import/order': [
         'error',

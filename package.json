@@ -1,8 +1,20 @@
 {
-  "name": "codex-delegate",
+  "name": "@h-arnold/codex-delegate",
   "version": "0.0.1",
   "description": "A quick and dirty cli tool that enables easy delegation of tasks to codex sub-agents.",
-  "main": "src/codex-delegate.ts",
+  "type": "module",
+  "main": "dist/codex-delegate.js",
+  "types": "dist/codex-delegate.d.ts",
+  "files": [
+    "dist/",
+    "bin/"
+  ],
+  "bin": {
+    "codex-delegate": "bin/codex-delegate.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "directories": {
     "doc": "docs",
     "test": "tests"
@@ -16,8 +28,10 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
     "prettier:check": "prettier --check .",
+    "lint:md": "markdownlint \"**/*.md\" -c .markdownlint.json",
     "prepare": "husky",
-    "husky:init": "npx husky init"
+    "husky:init": "npx husky init",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.7.1",
@@ -27,11 +41,13 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsdoc": "^62.5.0",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-vitest": "^0.5.4",
     "globals": "^17.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
+    "markdownlint-cli": "^0.36.0",
     "prettier": "^3.8.1",
     "typescript": "^5.1.6",
     "typescript-eslint": "^8.54.0",
