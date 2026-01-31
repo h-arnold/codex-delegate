@@ -27,6 +27,23 @@ let helpers: typeof import('../src/codex-delegate');
 
 describe('Stream Handling and Event Processing', () => {
   let stdoutWrite: ReturnType<typeof vi.spyOn>;
+  const baseOpts: SmallOpts = {
+    role: 'impl',
+    task: 't',
+    instructions: '',
+    verbose: false,
+    timeoutMinutes: 1,
+  };
+  /**
+   * Build stream handling options with optional overrides.
+   *
+   * @param {Partial<SmallOpts>} overrides - Optional overrides for base options.
+   * @returns {SmallOpts} The merged options.
+   */
+  const createOpts = (overrides: Partial<SmallOpts> = {}): SmallOpts => ({
+    ...baseOpts,
+    ...overrides,
+  });
 
   beforeEach(async () => {
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -41,14 +58,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'agent_message', text: 'OK' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.finalResponse).toBe('OK');
   });
 
@@ -56,14 +66,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'command_execution', command: 'ls' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.commands).toEqual(['ls']);
   });
 
@@ -74,14 +77,7 @@ describe('Stream Handling and Event Processing', () => {
         item: { type: 'file_change', changes: [{ kind: 'modified', path: 'src/a.ts' }] },
       },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.fileChanges).toEqual(['modified: src/a.ts']);
   });
 
@@ -89,14 +85,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'mcp_tool_call', server: 's', tool: 't' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.toolCalls).toEqual(['s:t']);
   });
 
@@ -104,14 +93,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'web_search', query: 'query' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.webQueries).toEqual(['query']);
   });
 
@@ -119,14 +101,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'command_execution', command: 'echo hi' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Command executed: echo hi'));
   });
 
@@ -143,14 +118,7 @@ describe('Stream Handling and Event Processing', () => {
         },
       },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(stdoutWrite).toHaveBeenCalledWith(
       expect.stringContaining('File change: update: src/file.ts'),
     );
@@ -163,14 +131,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'mcp_tool_call', server: 'a', tool: 'b' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Tool call: a:b'));
   });
 
@@ -178,14 +139,7 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'web_search', query: 'fast query' } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Web search: fast query'));
   });
 
@@ -193,54 +147,31 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'turn.completed', usage: { input_tokens: 3, output_tokens: 4 } },
     ];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
     expect(res.usageSummary).toMatch(/Usage: input 3, output 4/);
   });
 
   it('STREAM-07: turn.failed throws with the event error message', async () => {
     const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'failure' } }];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
     await expect(
-      helpers.processStream(makeEventStream(events), opts, undefined, 1000),
+      helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000),
     ).rejects.toThrow('failure');
   });
 
   it('STREAM-08: error event throws with message', async () => {
     const events: StreamedEvent[] = [{ type: 'error', message: 'boom' }];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
     await expect(
-      helpers.processStream(makeEventStream(events), opts, undefined, 1000),
+      helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000),
     ).rejects.toThrow('boom');
   });
 
   it('STREAM-09: stream reading respects timeout and rejects with timeout message', async () => {
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 0.001,
-    };
-    const p = helpers.processStream(nonResolvingNextWithReturn(), opts, undefined, 0);
+    const p = helpers.processStream(
+      nonResolvingNextWithReturn(),
+      createOpts({ timeoutMinutes: 0.001 }),
+      undefined,
+      0,
+    );
     // allow the scheduled timeout to run
     await Promise.resolve();
     await expect(p).rejects.toThrow(/timed out/);
@@ -252,14 +183,12 @@ describe('Stream Handling and Event Processing', () => {
     ];
     const write = vi.fn();
     const logStream = { write } as unknown as ReturnType<typeof import('fs').createWriteStream>;
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: true,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(makeEventStream(events), opts, logStream, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts({ verbose: true }),
+      logStream,
+      1000,
+    );
     expect(res.finalResponse).toBe('hi');
     expect(write).toHaveBeenCalled();
     expect(stdoutWrite).toHaveBeenCalled();
@@ -268,48 +197,27 @@ describe('Stream Handling and Event Processing', () => {
   it('STREAM-11: iterator.return is called in finally, even on error', async () => {
     const flag = { called: false };
     const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'oops' } }];
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
     await expect(
-      helpers.processStream(withReturnFlag(events, flag), opts, undefined, 1000),
+      helpers.processStream(withReturnFlag(events, flag), createOpts(), undefined, 1000),
     ).rejects.toThrow('oops');
     expect(flag.called).toBe(true);
   });
 
   it('STREAM-12: processStream handles an immediately-ending stream (no events)', async () => {
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
-    const res = await helpers.processStream(emptyStream(), opts, undefined, 1000);
+    const res = await helpers.processStream(emptyStream(), createOpts(), undefined, 1000);
     expect(res).toEqual(helpers.toStreamResults());
   });
 
   it('STREAM-13: iterator.next throws -> processStream propagates error and calls iterator.return', async () => {
     const flag: { returned?: boolean } = {};
-    const opts: SmallOpts = {
-      role: 'impl',
-      task: 't',
-      instructions: '',
-      verbose: false,
-      timeoutMinutes: 1,
-    };
     await expect(
-      helpers.processStream(throwingNextStream(flag), opts, undefined, 1000),
+      helpers.processStream(throwingNextStream(flag), createOpts(), undefined, 1000),
     ).rejects.toThrow('sync-next-throw');
     expect(flag.returned).toBe(true);
 
     const flag2: { returned?: boolean } = {};
     await expect(
-      helpers.processStream(rejectingNextStream(flag2), opts, undefined, 1000),
+      helpers.processStream(rejectingNextStream(flag2), createOpts(), undefined, 1000),
     ).rejects.toThrow('async-next-throw');
     expect(flag2.returned).toBe(true);
   });
