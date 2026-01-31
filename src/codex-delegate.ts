@@ -247,7 +247,13 @@ function resolvePromptTemplate(role: string): string {
   const fileName = `${role}.md`;
   const templatePath = path.join(CURRENT_DIR, 'agent-prompts', fileName);
   try {
-    return readFileSync(templatePath, 'utf-8').trim();
+    const resolved = path.resolve(templatePath);
+    if (!resolved.startsWith(process.cwd())) {
+      // If a template path somehow resolves outside the project, treat as missing
+      return '';
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path is validated and constrained to project files
+    return readFileSync(resolved, 'utf-8').trim();
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return '';
@@ -259,7 +265,12 @@ function resolvePromptTemplate(role: string): string {
 function listPromptRoles(): string[] {
   const promptsPath = path.join(CURRENT_DIR, 'agent-prompts');
   try {
-    return readdirSync(promptsPath)
+    const resolved = path.resolve(promptsPath);
+    if (!resolved.startsWith(process.cwd())) {
+      return [];
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is resolved and constrained to project files
+    return readdirSync(resolved)
       .filter((entry) => entry.endsWith('.md'))
       .map((entry) => entry.replace(/\.md$/, ''))
       .sort((a, b) => a.localeCompare(b));
@@ -318,7 +329,12 @@ function resolveOutputSchema(
   defaultSchema: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
   const readJsonObject = (schemaPath: string): Record<string, unknown> => {
-    const parsed = JSON.parse(readFileSync(schemaPath, 'utf-8'));
+    const resolved = path.resolve(schemaPath);
+    if (!resolved.startsWith(process.cwd())) {
+      throw new Error('Schema path must be inside project directory.');
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated to be inside project
+    const parsed = JSON.parse(readFileSync(resolved, 'utf-8'));
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       return parsed as Record<string, unknown>;
     }
@@ -550,7 +566,12 @@ function printFinalResponse(
 
 function tailLogFile(logPath: string, lineCount: number): string[] {
   try {
-    const content = readFileSync(logPath, 'utf-8');
+    const resolved = path.resolve(logPath);
+    if (!resolved.startsWith(process.cwd())) {
+      return [];
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    const content = readFileSync(resolved, 'utf-8');
     const trimmed = content.trim();
     if (!trimmed) {
       return [];
@@ -618,7 +639,15 @@ async function run(): Promise<void> {
 
   const logPath = options.logFile ?? path.join(process.cwd(), 'codex-delegate.log');
   const shouldLog = options.verbose || Boolean(options.logFile);
-  const logStream = shouldLog ? createWriteStream(logPath, { flags: 'a' }) : undefined;
+  let logStream: ReturnType<typeof createWriteStream> | undefined;
+  if (shouldLog) {
+    const resolved = path.resolve(logPath);
+    if (!resolved.startsWith(process.cwd())) {
+      throw new Error('Log file path must be inside project directory.');
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    logStream = createWriteStream(resolved, { flags: 'a' });
+  }
   const progressIntervalMs = 60_000;
   let progressInterval: NodeJS.Timeout | undefined;
   if (logStream) {
