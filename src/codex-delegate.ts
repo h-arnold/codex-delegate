@@ -1,7 +1,7 @@
 import { createWriteStream } from 'node:fs';
 import path from 'node:path';
 
-import { Codex } from 'codex-sdk';
+import { Codex } from '@openai/codex-sdk';
 
 import { handleImmediateFlag, printHelp } from './cli/help.js';
 import {

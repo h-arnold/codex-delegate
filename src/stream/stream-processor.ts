@@ -1,4 +1,4 @@
-import type { StreamedEvent, StreamedItem } from 'codex-sdk';
+import type { ThreadEvent as StreamedEvent, ThreadItem as StreamedItem } from '@openai/codex-sdk';
 
 import {
   isAgentMessage,
@@ -57,6 +57,37 @@ function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
 }
 
 /**
+ * Emit a short stdout update when a streamed item completes.
+ *
+ * @param {StreamedItem} item - The completed item to report.
+ * @returns {void}
+ * @remarks
+ * This is used to provide immediate feedback for commands, file changes, tool calls, and web searches.
+ * @example
+ * emitStreamUpdate(item);
+ */
+function emitStreamUpdate(item: StreamedItem): void {
+  switch (item.type) {
+    case 'command_execution':
+      process.stdout.write(`Command executed: ${item.command}\n`);
+      break;
+    case 'file_change':
+      item.changes.forEach((change) => {
+        process.stdout.write(`File change: ${change.kind}: ${change.path}\n`);
+      });
+      break;
+    case 'mcp_tool_call':
+      process.stdout.write(`Tool call: ${item.server}:${item.tool}\n`);
+      break;
+    case 'web_search':
+      process.stdout.write(`Web search: ${item.query}\n`);
+      break;
+    default:
+      break;
+  }
+}
+
+/**
  * Handle a completed turn event to extract usage statistics.
  *
  * @param {StreamedEvent} event - The turn.completed event which may include `usage` information.
@@ -68,8 +99,9 @@ function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
  * handleTurnCompleted(event, results);
  */
 function handleTurnCompleted(event: StreamedEvent, results: StreamResults): void {
-  if (event.usage) {
-    results.usageSummary = `Usage: input ${event.usage.input_tokens}, output ${event.usage.output_tokens}`;
+  if ('usage' in event && event.usage) {
+    const usage = event.usage as { input_tokens: number; output_tokens: number };
+    results.usageSummary = `Usage: input ${usage.input_tokens}, output ${usage.output_tokens}`;
   }
 }
 
@@ -127,6 +159,7 @@ async function processStream(
         case 'item.completed':
           if (event.item) {
             handleItemCompleted(event.item, results);
+            emitStreamUpdate(event.item);
           }
           break;
         case 'turn.completed':

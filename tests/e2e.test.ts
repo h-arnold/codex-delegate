@@ -41,7 +41,7 @@ describe('Integration / End-to-End Scenarios', () => {
       }),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('codex-sdk', () => ({
+    vi.mock('@openai/codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}
@@ -89,7 +89,7 @@ describe('Integration / End-to-End Scenarios', () => {
       ),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('codex-sdk', () => ({
+    vi.mock('@openai/codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}
@@ -139,7 +139,7 @@ describe('Integration / End-to-End Scenarios', () => {
       runStreamed: vi.fn().mockResolvedValue({ events: emptyStream() }),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('codex-sdk', () => ({
+    vi.mock('@openai/codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}

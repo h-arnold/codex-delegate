@@ -78,6 +78,6 @@
   },
   "homepage": "https://github.com/h-arnold/codex-delegate#readme",
   "dependencies": {
-    "codex-sdk": "^0.2.9"
+    "@openai/codex-sdk": "^0.93.0"
   }
 }

@@ -1,6 +1,6 @@
 # Codex Delegation
 
-Use the Codex delegation runner to dispatch focused sub-agent tasks while keeping the main context small. It wraps `codex-sdk` and streams concise output by default. When logging is enabled (via `--verbose` or `--log-file`), it also prints periodic progress snapshots from the log file.
+Use the Codex delegation runner to dispatch focused sub-agent tasks while keeping the main context small. It wraps `@openai/codex-sdk` and streams concise output by default. When logging is enabled (via `--verbose` or `--log-file`), it also prints periodic progress snapshots from the log file.
 
 ## Quick Start
 

@@ -153,7 +153,7 @@ describe('Logging and Output helpers', () => {
     vi.resetModules();
 
     // mock the codex sdk to return a controllable thread via a global slot
-    vi.mock('codex-sdk', () => {
+    vi.mock('@openai/codex-sdk', () => {
       return {
         Codex: class {
           /**
