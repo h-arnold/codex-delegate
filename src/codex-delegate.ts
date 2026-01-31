@@ -2,11 +2,7 @@ import { createWriteStream, readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import {
-  Codex,
-  type StreamedEvent,
-  type StreamedItem,
-} from '@openai/codex-sdk';
+import { Codex, type StreamedEvent, type StreamedItem } from '@openai/codex-sdk';
 
 const require = createRequire(import.meta.url);
 // eslint-disable-next-line import/no-commonjs
@@ -70,17 +66,8 @@ type BooleanOptionKey = (typeof BOOLEAN_KEYS)[number];
 // cSpell:ignore xhigh
 const REASONING_LEVELS = ['minimal', 'low', 'medium', 'high', 'xhigh'] as const;
 type ReasoningLevel = (typeof REASONING_LEVELS)[number];
-const SANDBOX_MODES = [
-  'read-only',
-  'workspace-write',
-  'danger-full-access',
-] as const;
-const APPROVAL_POLICIES = [
-  'never',
-  'on-request',
-  'on-failure',
-  'untrusted',
-] as const;
+const SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'] as const;
+const APPROVAL_POLICIES = ['never', 'on-request', 'on-failure', 'untrusted'] as const;
 const WEB_SEARCH_MODES = ['disabled', 'cached', 'live'] as const;
 
 function parseBoolean(value: string): boolean | undefined {
@@ -169,9 +156,7 @@ function parseArgs(argv: string[]): DelegateOptions {
 
   const ASSIGN_HANDLERS = createAssignHandlers(options);
 
-  function createAssignHandlers(
-    opts: DelegateOptions,
-  ): Record<string, (v: string) => void> {
+  function createAssignHandlers(opts: DelegateOptions): Record<string, (v: string) => void> {
     return {
       role: (v: string): void => {
         opts.role = v;
@@ -298,10 +283,7 @@ function buildPrompt(options: DelegateOptions): string {
 }
 
 function validateOptions(options: DelegateOptions): void {
-  if (
-    options.reasoning &&
-    !REASONING_LEVELS.includes(options.reasoning as ReasoningLevel)
-  ) {
+  if (options.reasoning && !REASONING_LEVELS.includes(options.reasoning as ReasoningLevel)) {
     throw new Error(
       `Invalid --reasoning value "${options.reasoning}". Expected one of: ${[
         ...REASONING_LEVELS,
@@ -310,9 +292,9 @@ function validateOptions(options: DelegateOptions): void {
   }
   if (options.sandbox && !SANDBOX_MODES.includes(options.sandbox)) {
     throw new Error(
-      `Invalid --sandbox value "${options.sandbox}". Expected one of: ${[
-        ...SANDBOX_MODES,
-      ].join(', ')}.`,
+      `Invalid --sandbox value "${options.sandbox}". Expected one of: ${[...SANDBOX_MODES].join(
+        ', ',
+      )}.`,
     );
   }
   if (options.approval && !APPROVAL_POLICIES.includes(options.approval)) {
@@ -340,9 +322,7 @@ function resolveOutputSchema(
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       return parsed as Record<string, unknown>;
     }
-    throw new Error(
-      `Schema file at ${schemaPath} must contain a JSON object at the root.`,
-    );
+    throw new Error(`Schema file at ${schemaPath} must contain a JSON object at the root.`);
   };
 
   if (options.schemaFile) {
@@ -351,9 +331,7 @@ function resolveOutputSchema(
       return readJsonObject(schemaPath);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to read or parse schema file at ${options.schemaFile}: ${message}`,
-      );
+      throw new Error(`Failed to read or parse schema file at ${options.schemaFile}: ${message}`);
     }
   }
 
@@ -377,21 +355,12 @@ function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
-function isAgentMessage(
-  item: StreamedItem,
-): item is StreamedItem & { text: string } {
-  return (
-    item.type === 'agent_message' && isString((item as { text?: unknown }).text)
-  );
+function isAgentMessage(item: StreamedItem): item is StreamedItem & { text: string } {
+  return item.type === 'agent_message' && isString((item as { text?: unknown }).text);
 }
 
-function isCommandExecution(
-  item: StreamedItem,
-): item is StreamedItem & { command: string } {
-  return (
-    item.type === 'command_execution' &&
-    isString((item as { command?: unknown }).command)
-  );
+function isCommandExecution(item: StreamedItem): item is StreamedItem & { command: string } {
+  return item.type === 'command_execution' && isString((item as { command?: unknown }).command);
 }
 
 type FileChange = { kind: string; path: string };
@@ -408,32 +377,19 @@ function isFileChangeArray(changes: unknown): changes is FileChange[] {
   );
 }
 
-function isFileChangeItem(
-  item: StreamedItem,
-): item is StreamedItem & { changes: FileChange[] } {
-  return (
-    item.type === 'file_change' &&
-    isFileChangeArray((item as { changes?: unknown }).changes)
-  );
+function isFileChangeItem(item: StreamedItem): item is StreamedItem & { changes: FileChange[] } {
+  return item.type === 'file_change' && isFileChangeArray((item as { changes?: unknown }).changes);
 }
 
 function isMcpToolCall(
   item: StreamedItem,
 ): item is StreamedItem & { server: string; tool: string } {
   const candidate = item as { server?: unknown; tool?: unknown };
-  return (
-    item.type === 'mcp_tool_call' &&
-    isString(candidate.server) &&
-    isString(candidate.tool)
-  );
+  return item.type === 'mcp_tool_call' && isString(candidate.server) && isString(candidate.tool);
 }
 
-function isWebSearch(
-  item: StreamedItem,
-): item is StreamedItem & { query: string } {
-  return (
-    item.type === 'web_search' && isString((item as { query?: unknown }).query)
-  );
+function isWebSearch(item: StreamedItem): item is StreamedItem & { query: string } {
+  return item.type === 'web_search' && isString((item as { query?: unknown }).query);
 }
 
 function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
@@ -450,9 +406,7 @@ function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
       break;
     case 'file_change': {
       if (isFileChangeItem(item)) {
-        const files = item.changes.map(
-          (change) => `${change.kind}: ${change.path}`,
-        );
+        const files = item.changes.map((change) => `${change.kind}: ${change.path}`);
         results.fileChanges.push(...files);
       }
       break;
@@ -472,10 +426,7 @@ function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
   }
 }
 
-function handleTurnCompleted(
-  event: StreamedEvent,
-  results: StreamResults,
-): void {
+function handleTurnCompleted(event: StreamedEvent, results: StreamResults): void {
   if (event.usage) {
     results.usageSummary = `Usage: input ${event.usage.input_tokens}, output ${event.usage.output_tokens}`;
   }
@@ -505,9 +456,7 @@ async function processStream(
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(
-        new Error(
-          `Codex delegation timed out after ${options.timeoutMinutes ?? 10} minutes.`,
-        ),
+        new Error(`Codex delegation timed out after ${options.timeoutMinutes ?? 10} minutes.`),
       );
     }, timeoutMs);
   });
@@ -557,10 +506,7 @@ async function processStream(
   return results;
 }
 
-function printSummaries(
-  results: StreamResults,
-  options: DelegateOptions,
-): void {
+function printSummaries(results: StreamResults, options: DelegateOptions): void {
   if (options.verbose) {
     return;
   }
@@ -644,9 +590,7 @@ async function run(): Promise<void> {
   const availableRoles = listPromptRoles();
   if (availableRoles.length > 0 && !availableRoles.includes(options.role)) {
     throw new Error(
-      `Unknown --role "${options.role}". Available roles: ${availableRoles.join(
-        ', ',
-      )}.`,
+      `Unknown --role "${options.role}". Available roles: ${availableRoles.join(', ')}.`,
     );
   }
 
@@ -654,10 +598,7 @@ async function run(): Promise<void> {
   // Ensure the reasoning option is narrowed to the allowed literal union before
   // passing it into the Codex API.
   let reasoningArg: ReasoningLevel | undefined;
-  if (
-    options.reasoning &&
-    REASONING_LEVELS.includes(options.reasoning as ReasoningLevel)
-  ) {
+  if (options.reasoning && REASONING_LEVELS.includes(options.reasoning as ReasoningLevel)) {
     reasoningArg = options.reasoning as ReasoningLevel;
   }
 
@@ -675,12 +616,9 @@ async function run(): Promise<void> {
   const streamed = await thread.runStreamed(prompt, { outputSchema });
   const timeoutMs = (options.timeoutMinutes ?? 10) * 60 * 1000;
 
-  const logPath =
-    options.logFile ?? path.join(process.cwd(), 'codex-delegate.log');
+  const logPath = options.logFile ?? path.join(process.cwd(), 'codex-delegate.log');
   const shouldLog = options.verbose || Boolean(options.logFile);
-  const logStream = shouldLog
-    ? createWriteStream(logPath, { flags: 'a' })
-    : undefined;
+  const logStream = shouldLog ? createWriteStream(logPath, { flags: 'a' }) : undefined;
   const progressIntervalMs = 60_000;
   let progressInterval: NodeJS.Timeout | undefined;
   if (logStream) {
@@ -689,19 +627,12 @@ async function run(): Promise<void> {
       if (tail.length === 0) {
         return;
       }
-      process.stdout.write(
-        ['\nSub-agent progress (last 5 log lines):', ...tail].join('\n') + '\n',
-      );
+      process.stdout.write(['\nSub-agent progress (last 5 log lines):', ...tail].join('\n') + '\n');
     }, progressIntervalMs);
   }
 
   try {
-    const results = await processStream(
-      streamed.events,
-      options,
-      logStream,
-      timeoutMs,
-    );
+    const results = await processStream(streamed.events, options, logStream, timeoutMs);
 
     printSummaries(results, options);
     printFinalResponse(results, outputSchema);

@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+coverage
+.vscode
+.husky
+.DS_Store
+package-lock.json
+.yarn
+.pnpm-debug.log
+.env

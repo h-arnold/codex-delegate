@@ -2,6 +2,7 @@ import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 import security from 'eslint-plugin-security';
+import vitest from 'eslint-plugin-vitest';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -13,7 +14,7 @@ export default tseslint.config(
     plugins: {
       '@typescript-eslint': tseslint.plugin,
       '@stylistic': stylistic,
-      jest,
+      vitest,
       security,
       import: importPlugin,
     },
@@ -28,7 +29,7 @@ export default tseslint.config(
       },
       globals: {
         ...globals.node,
-        ...globals.jest,
+        ...globals.vitest,
       },
     },
   },
@@ -47,15 +48,15 @@ export default tseslint.config(
     },
   },
   {
-    files: ['test/**/*.ts', 'src/**/*.spec.ts'], // Apply type-aware rules and Jest rules to test files
+    files: ['test/**/*.ts', 'src/**/*.spec.ts'], // Apply type-aware rules and Vitest rules to test files
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json', './jest-e2e.config.cjs'],
+        project: ['./tsconfig.json', './vitest.config.ts'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
-      ...jest.configs.recommended.rules, // Apply Jest recommended rules
+      ...vitest.configs.recommended.rules, // Apply Vitest recommended rules
       // You might want to add more specific rules for test files here
     },
   },
