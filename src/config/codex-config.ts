@@ -119,7 +119,11 @@ function normaliseConfig(raw: Record<string, unknown>): CodexDelegateConfig {
   if (typeof raw.maxItems === 'number' && Number.isFinite(raw.maxItems)) {
     config.maxItems = raw.maxItems;
   }
-  if (typeof raw.timeoutMinutes === 'number' && Number.isFinite(raw.timeoutMinutes)) {
+  if (
+    typeof raw.timeoutMinutes === 'number' &&
+    Number.isFinite(raw.timeoutMinutes) &&
+    raw.timeoutMinutes > 0
+  ) {
     config.timeoutMinutes = raw.timeoutMinutes;
   }
   return config;
@@ -153,6 +157,8 @@ function readCodexConfig(): CodexDelegateConfig {
     if (error instanceof SyntaxError) {
       return defaults;
     }
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Failed to read config file, using defaults. Error: ${message}`);
     return defaults;
   }
 }

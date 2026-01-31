@@ -99,7 +99,11 @@ function listPromptRoles(): string[] {
           if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
             return false;
           }
-          throw error;
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(
+            `Warning: Failed to read role template "${entry}", skipping. Error: ${message}`,
+          );
+          return false;
         }
       })
       .map((entry) => entry.replace(/\.md$/, ''))
