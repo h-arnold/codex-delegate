@@ -1,4 +1,6 @@
 import { handleImmediateFlag } from './help.js';
+import { ensureCodexConfig } from '../config/codex-config.js';
+import { DEFAULT_OPTIONS } from '../config/default-options.js';
 import type { DelegateOptions } from '../types/delegate-options.js';
 
 /**
@@ -48,21 +50,6 @@ const APPROVAL_POLICIES = ['never', 'on-request', 'on-failure', 'untrusted'] as 
  * Allowed web search modes.
  */
 const WEB_SEARCH_MODES = ['disabled', 'cached', 'live'] as const;
-
-/**
- * Default values for all delegate CLI options.
- */
-const DEFAULT_OPTIONS: DelegateOptions = {
-  role: 'implementation',
-  task: '',
-  instructions: '',
-  sandbox: 'danger-full-access',
-  approval: 'never',
-  network: true,
-  webSearch: 'live',
-  verbose: false,
-  timeoutMinutes: 10,
-};
 
 type BooleanOptionKey = (typeof BOOLEAN_KEYS)[number];
 type ReasoningLevel = (typeof REASONING_LEVELS)[number];
@@ -346,7 +333,8 @@ function createAssignHandlers(opts: DelegateOptions): Record<string, (v: string)
  * parseArgs(['--task', 'Run tests', '--verbose']);
  */
 function parseArgs(argv: string[]): DelegateOptions {
-  const options: DelegateOptions = { ...DEFAULT_OPTIONS };
+  const configDefaults = ensureCodexConfig();
+  const options: DelegateOptions = { ...DEFAULT_OPTIONS, ...configDefaults };
 
   const assignHandlers = createAssignHandlers(options);
 

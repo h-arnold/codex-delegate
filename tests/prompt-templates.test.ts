@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -27,54 +28,121 @@ vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
 }));
 
 let helpers: typeof import('../src/codex-delegate');
+let originalCwd = '';
+let tempDir = '';
+
 beforeEach(async () => {
+  originalCwd = process.cwd();
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-prompts-'));
+  process.chdir(tempDir);
   helpers = await import('../src/codex-delegate');
 });
 
+afterEach(() => {
+  process.chdir(originalCwd);
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  } catch {}
+});
+
 describe('Prompt Templates', () => {
-  const promptsDir = path.join(process.cwd(), 'src', 'agent-prompts');
+  /**
+   * Resolve the `.codex` prompts directory for the current temp test workspace.
+   *
+   * @returns {string} Absolute path to the test `.codex` directory.
+   * @example
+   * const dir = promptsDir();
+   */
+  const promptsDir = (): string => path.join(tempDir, '.codex');
+  const createdFiles = new Set<string>();
+  let createdDir = false;
+
+  /**
+   * Ensure the `.codex` prompts directory exists for the test.
+   *
+   * @returns {void}
+   * @remarks
+   * Tracks whether the directory was created so cleanup can be conservative.
+   * @example
+   * ensurePromptsDir();
+   */
+  const ensurePromptsDir = (): void => {
+    const targetDir = promptsDir();
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+      createdDir = true;
+    }
+  };
+
+  /**
+   * Write a prompt file into the `.codex` directory and track it for cleanup.
+   *
+   * @param {string} fileName - File name to create inside `.codex`.
+   * @param {string} contents - File contents to write.
+   * @returns {string} The full path to the created file.
+   * @remarks
+   * Ensures the `.codex` directory exists before writing.
+   * @example
+   * writePromptFile('implementation.md', 'Template');
+   */
+  const writePromptFile = (fileName: string, contents: string): string => {
+    ensurePromptsDir();
+    const filePath = path.join(promptsDir(), fileName);
+    fs.writeFileSync(filePath, contents);
+    createdFiles.add(filePath);
+    return filePath;
+  };
+
+  /**
+   * Remove tracked prompt files and the `.codex` directory if created and empty.
+   *
+   * @returns {void}
+   * @remarks
+   * Leaves any pre-existing `.codex` directory intact.
+   * @example
+   * cleanupPromptsDir();
+   */
+  const cleanupPromptsDir = (): void => {
+    for (const filePath of createdFiles) {
+      try {
+        fs.rmSync(filePath, { force: true });
+      } catch {}
+    }
+    createdFiles.clear();
+    const targetDir = promptsDir();
+    if (createdDir && fs.existsSync(targetDir) && fs.readdirSync(targetDir).length === 0) {
+      try {
+        fs.rmdirSync(targetDir);
+      } catch {}
+    }
+    createdDir = false;
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   afterEach(() => {
-    // clean up any test files we might have created
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_whitespace.md'));
-    } catch {}
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_sort_a.md'));
-    } catch {}
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_sort_b.md'));
-    } catch {}
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_sort_c.md'));
-    } catch {}
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_sort_c.txt'));
-    } catch {}
-    try {
-      fs.unlinkSync(path.join(promptsDir, '__test_template.md'));
-    } catch {}
+    cleanupPromptsDir();
   });
 
-  it('PROMPT-01: resolve existing template returns trimmed contents', () => {
-    const p = path.join(promptsDir, '__test_template.md');
-    fs.writeFileSync(p, '  Hello world  \n');
+  it('ROLE-05: resolvePromptTemplate returns trimmed content for valid templates', () => {
+    writePromptFile('__test_template.md', '  Hello world  \n');
     const out = helpers.resolvePromptTemplate('__test_template');
     expect(out).toBe('Hello world');
   });
 
-  it('PROMPT-02: resolve missing template returns empty string (ENOENT)', () => {
-    const out = helpers.resolvePromptTemplate('this-file-should-not-exist');
-    expect(out).toBe('');
+  it('ROLE-06: resolvePromptTemplate returns empty string for missing or whitespace-only templates', () => {
+    const missingOut = helpers.resolvePromptTemplate('this-file-should-not-exist');
+    expect(missingOut).toBe('');
+    writePromptFile('__test_whitespace.md', '   \n   ');
+    const whitespaceOut = helpers.resolvePromptTemplate('__test_whitespace');
+    expect(whitespaceOut).toBe('');
   });
 
   it('PROMPT-03: resolve template outside project path -> empty string', () => {
     // Spy on path.resolve to simulate resolving outside cwd
-    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/agent-prompts/foo.md');
+    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/.codex/foo.md');
     try {
       const out = helpers.resolvePromptTemplate('foo');
       expect(out).toBe('');
@@ -83,13 +151,10 @@ describe('Prompt Templates', () => {
     }
   });
 
-  it('PROMPT-04: listPromptRoles returns sorted base names', () => {
-    const a = path.join(promptsDir, '__test_sort_a.md');
-    const b = path.join(promptsDir, '__test_sort_b.md');
-    const c = path.join(promptsDir, '__test_sort_c.md');
-    fs.writeFileSync(b, 'B');
-    fs.writeFileSync(a, 'A');
-    fs.writeFileSync(c, 'C');
+  it('ROLE-01: listPromptRoles reads from .codex and returns sorted role names', () => {
+    writePromptFile('__test_sort_b.md', 'B');
+    writePromptFile('__test_sort_a.md', 'A');
+    writePromptFile('__test_sort_c.md', 'C');
     const roles = helpers.listPromptRoles();
     // ensure our test roles are present and sorted
     const idxA = roles.indexOf('__test_sort_a');
@@ -104,7 +169,7 @@ describe('Prompt Templates', () => {
 
   it('PROMPT-05: listPromptRoles returns [] when directory missing', () => {
     // Simulate missing directory by resolving outside of project cwd
-    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/agent-prompts');
+    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/.codex');
     try {
       const roles = helpers.listPromptRoles();
       expect(Array.isArray(roles)).toBe(true);
@@ -115,8 +180,7 @@ describe('Prompt Templates', () => {
   });
 
   it('PROMPT-06: buildPrompt composes template + instructions + task', () => {
-    const p = path.join(promptsDir, '__test_template.md');
-    fs.writeFileSync(p, 'Template body');
+    writePromptFile('__test_template.md', 'Template body');
     const out = helpers.buildPrompt({
       role: '__test_template',
       instructions: 'Do X',
@@ -135,7 +199,7 @@ describe('Prompt Templates', () => {
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as unknown as never);
     // Simulate missing prompts directory by resolving path outside project cwd
-    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/agent-prompts');
+    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/.codex');
     try {
       helpers.handleImmediateFlag('--list-roles');
       expect(infoSpy).toHaveBeenCalledWith('No roles available.');
@@ -147,13 +211,10 @@ describe('Prompt Templates', () => {
     }
   });
 
-  it('PROMPT-08: listPromptRoles ignores non-.md files and sorts correctly', () => {
-    const a = path.join(promptsDir, '__test_sort_a.md');
-    const b = path.join(promptsDir, '__test_sort_b.md');
-    const t = path.join(promptsDir, '__test_sort_c.txt');
-    fs.writeFileSync(b, 'B');
-    fs.writeFileSync(a, 'A');
-    fs.writeFileSync(t, 'ignore me');
+  it('ROLE-04: listPromptRoles ignores non-markdown files', () => {
+    writePromptFile('__test_sort_b.md', 'B');
+    writePromptFile('__test_sort_a.md', 'A');
+    writePromptFile('__test_sort_c.txt', 'ignore me');
     const roles = helpers.listPromptRoles();
     expect(roles.includes('__test_sort_a')).toBe(true);
     expect(roles.includes('__test_sort_b')).toBe(true);
@@ -163,10 +224,19 @@ describe('Prompt Templates', () => {
     expect(ai < bi).toBe(true);
   });
 
-  it('PROMPT-09: resolvePromptTemplate returns empty string for files with only whitespace', () => {
-    const p = path.join(promptsDir, '__test_whitespace.md');
-    fs.writeFileSync(p, '   \n   ');
-    const out = helpers.resolvePromptTemplate('__test_whitespace');
-    expect(out).toBe('');
+  it('ROLE-02: listPromptRoles ignores AGENTS.md even if present', () => {
+    writePromptFile('AGENTS.md', 'Ignore this file');
+    writePromptFile('__test_sort_a.md', 'A');
+    const roles = helpers.listPromptRoles();
+    expect(roles.includes('AGENTS')).toBe(false);
+    expect(roles.includes('__test_sort_a')).toBe(true);
+  });
+
+  it('ROLE-03: listPromptRoles ignores whitespace-only markdown files', () => {
+    writePromptFile('__test_whitespace.md', '   \n   ');
+    writePromptFile('__test_sort_a.md', 'A');
+    const roles = helpers.listPromptRoles();
+    expect(roles.includes('__test_whitespace')).toBe(false);
+    expect(roles.includes('__test_sort_a')).toBe(true);
   });
 });

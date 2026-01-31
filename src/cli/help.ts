@@ -13,7 +13,8 @@ import { listPromptRoles } from '../prompts/prompt-templates.js';
 function printHelp(): void {
   console.info(
     [
-      'Usage: node scripts/codex-delegate.js [options]',
+      'Usage: codex-delegate [options]',
+      '       codex-delegate init',
       '',
       'Options:',
       '  --role <role>             Role to use (default: implementation)',
@@ -34,6 +35,9 @@ function printHelp(): void {
       '  --timeout-minutes <n>     Timeout in minutes (default: 10)',
       '  --list-roles              Print available prompt roles and exit',
       '  --help, -h                Show this help message',
+      '',
+      'Commands:',
+      '  init                      Create the .codex config file if missing',
     ].join('\n'),
   );
 }

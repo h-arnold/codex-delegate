@@ -13,6 +13,7 @@ import {
   type ReasoningLevel,
   validateOptions,
 } from './cli/options.js';
+import { ensureCodexConfig } from './config/codex-config.js';
 import { tailLogFile } from './logging/logging.js';
 import { buildPrompt } from './prompts/prompt-builder.js';
 import { listPromptRoles, resolvePromptTemplate } from './prompts/prompt-templates.js';
@@ -46,7 +47,13 @@ import type { DelegateOptions } from './types/delegate-options.js';
  * await run();
  */
 async function run(): Promise<void> {
-  const options = parseArgs(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  if (argv[0] === 'init') {
+    ensureCodexConfig();
+    return;
+  }
+
+  const options = parseArgs(argv);
   if (!options.task) {
     throw new Error('Missing required --task value.');
   }
@@ -68,10 +75,26 @@ async function run(): Promise<void> {
   validateOptions(options);
 
   const availableRoles = listPromptRoles();
-  if (availableRoles.length > 0 && !availableRoles.includes(options.role)) {
+  if (availableRoles.length === 0) {
+    process.stderr.write(
+      'No roles available in .codex; continuing without role-specific instructions.\n',
+    );
+  } else if (!availableRoles.includes(options.role)) {
     throw new Error(
       `Unknown --role "${options.role}". Available roles: ${availableRoles.join(', ')}.`,
     );
+  }
+
+  const logPath = options.logFile ?? path.join(process.cwd(), 'codex-delegate.log');
+  const shouldLog = options.verbose || Boolean(options.logFile);
+  let logStream: ReturnType<typeof createWriteStream> | undefined;
+  if (shouldLog) {
+    const resolved = path.resolve(logPath);
+    if (!resolved.startsWith(process.cwd())) {
+      throw new Error('Log file path must be inside project directory.');
+    }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    logStream = createWriteStream(resolved, { flags: 'a' });
   }
 
   const codex = new Codex();
@@ -96,18 +119,6 @@ async function run(): Promise<void> {
   const prompt = buildPrompt(options);
   const streamed = await thread.runStreamed(prompt, { outputSchema });
   const timeoutMs = (options.timeoutMinutes ?? 10) * 60 * 1000;
-
-  const logPath = options.logFile ?? path.join(process.cwd(), 'codex-delegate.log');
-  const shouldLog = options.verbose || Boolean(options.logFile);
-  let logStream: ReturnType<typeof createWriteStream> | undefined;
-  if (shouldLog) {
-    const resolved = path.resolve(logPath);
-    if (!resolved.startsWith(process.cwd())) {
-      throw new Error('Log file path must be inside project directory.');
-    }
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
-    logStream = createWriteStream(resolved, { flags: 'a' });
-  }
   const progressIntervalMs = 60_000;
   let progressInterval: NodeJS.Timeout | undefined;
   if (logStream) {
