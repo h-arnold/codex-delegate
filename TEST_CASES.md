@@ -186,6 +186,14 @@ This document enumerates comprehensive test cases to validate the behavior of th
    - Input: webSearch='liveish'
    - Expected: throw Error
 
+Implemented: VAL-01..VAL-05 ✅
+
+- Tests located at: `tests/option-validation.test.ts`
+
+ISSUES FOUND (CODE) - Option Validation
+
+- None found. `validateOptions` validates `reasoning`, `sandbox`, `approval`, and `webSearch` and emits descriptive errors listing allowed values.
+
 ---
 
 ## Schema Resolution
