@@ -122,6 +122,8 @@ This document enumerates comprehensive test cases to validate the behavior of th
 
 ## Prompt Templates
 
+- **Implemented:** `tests/prompt-templates.test.ts`
+
 1. PROMPT-01: resolve existing template returns trimmed contents
    - Setup: create `agent-prompts/implementation.md`
    - Input: resolvePromptTemplate('implementation')

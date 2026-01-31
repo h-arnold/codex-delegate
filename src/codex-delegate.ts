@@ -10,6 +10,10 @@ import { Codex, type StreamedEvent, type StreamedItem } from '@openai/codex-sdk'
 /**
  *
  */
+/**
+ * Determine a safe current directory for the project relative operations.
+ * @returns {string} The directory path to use as the current project `src` directory.
+ */
 function getCurrentDirname(): string {
   try {
     return path.dirname(new URL(import.meta.url).pathname);
