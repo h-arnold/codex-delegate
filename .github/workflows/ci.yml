@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [22]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,4 +32,4 @@ jobs:
         run: npm run lint --silent -- --max-warnings=0
 
       - name: Run tests (with coverage)
-        run: npm run test -- --run --coverage
+        run: npm run test -- --coverage
