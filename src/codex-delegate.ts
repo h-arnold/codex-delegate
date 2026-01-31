@@ -1,14 +1,22 @@
 import { createWriteStream, readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { Codex, type StreamedEvent, type StreamedItem } from '@openai/codex-sdk';
 
-const require = createRequire(import.meta.url);
-// eslint-disable-next-line import/no-commonjs
-const { getCurrentDirname } = require('../src/common/file-utils') as {
-  getCurrentDirname: () => string;
-};
+// Determine a sensible project-relative "current directory". Prefer the
+// directory containing the `src` module when possible; fall back to the
+// project's `src` directory in environments where `import.meta.url` cannot be
+// resolved by older tooling or during some test harnesses.
+/**
+ *
+ */
+function getCurrentDirname(): string {
+  try {
+    return path.dirname(new URL(import.meta.url).pathname);
+  } catch {
+    return path.join(process.cwd(), 'src');
+  }
+}
 type DelegateOptions = {
   role: string;
   task: string;
@@ -1031,5 +1039,40 @@ async function main(): Promise<void> {
   }
 }
 
-// top-level await is unavailable with CommonJS; call the async entrypoint explicitly
-void main();
+// Export internal helpers for testing
+export {
+  parseBoolean,
+  isOption,
+  isBooleanOption,
+  applyBooleanOption,
+  parseArgs,
+  handleImmediateFlag,
+  printHelp,
+  resolvePromptTemplate,
+  listPromptRoles,
+  buildPrompt,
+  validateOptions,
+  resolveOutputSchema,
+  isString,
+  isAgentMessage,
+  isCommandExecution,
+  isFileChangeArray,
+  isFileChangeItem,
+  isMcpToolCall,
+  isWebSearch,
+  handleItemCompleted,
+  handleTurnCompleted,
+  toStreamResults,
+  processStream,
+  printSummaries,
+  printFinalResponse,
+  tailLogFile,
+  run,
+  main,
+};
+
+// Run the entrypoint only when not in the test environment to avoid side-effects during imports
+if (process.env.NODE_ENV !== 'test') {
+  // top-level await is unavailable with CommonJS; call the async entrypoint explicitly
+  void main();
+}

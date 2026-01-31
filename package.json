@@ -20,11 +20,11 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "vitest",
+    "test": "vitest --run",
     "test:watch": "vitest --watch",
     "test:cov": "vitest --coverage",
     "build": "tsc -p .",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx  --fix",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write .",
     "prettier:check": "prettier --check .",

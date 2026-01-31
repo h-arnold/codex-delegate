@@ -12,7 +12,8 @@
         "dbaeumer.vscode-eslint",
         "DavidAnson.vscode-markdownlint",
         "SonarSource.sonarlint-vscode",
-        "yzhang.markdown-all-in-one"
+        "yzhang.markdown-all-in-one",
+        "github.vscode-github-actions"
       ]
     }
   }

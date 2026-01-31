@@ -29,78 +29,94 @@ This document enumerates comprehensive test cases to validate the behavior of th
 
 ## CLI Parsing and Helpers
 
-1. CLI-01: parse boolean flag with explicit true
+1. CLI-01: parse boolean flag with explicit true - implemented (tests/cli-parsing.test.ts)
    - Input: ['--verbose','true']
    - Expected: options.verbose === true
 
-2. CLI-02: parse boolean flag with explicit false
+2. CLI-02: parse boolean flag with explicit false - implemented (tests/cli-parsing.test.ts)
    - Input: ['--verbose','false']
    - Expected: options.verbose === false
 
-3. CLI-03: parse boolean flag with no explicit value (flag only)
+3. CLI-03: parse boolean flag with no explicit value (flag only) - implemented (tests/cli-parsing.test.ts)
    - Input: ['--verbose']
    - Expected: options.verbose === true
 
-4. CLI-04: parse unknown option is ignored
+4. CLI-04: parse unknown option is ignored - implemented (tests/cli-parsing.test.ts)
    - Input: ['--nope','value']
    - Expected: No crash; returned options equals defaults with no 'nope'
 
-5. CLI-05: parse numeric integer (`--max-items`)
+5. CLI-05: parse numeric integer (`--max-items`) - implemented (tests/cli-parsing.test.ts)
    - Input: ['--max-items','5']
    - Expected: options.maxItems === 5
 
-6. CLI-06: parse numeric float (`--timeout-minutes`)
+6. CLI-06: parse numeric float (`--timeout-minutes`) - implemented (tests/cli-parsing.test.ts)
    - Input: ['--timeout-minutes','2.5']
    - Expected: options.timeoutMinutes === 2.5
 
-7. CLI-07: invalid numeric ignored (NaN)
+7. CLI-07: invalid numeric ignored (NaN) - implemented (tests/cli-parsing.test.ts)
    - Input: ['--max-items','abc']
    - Expected: options.maxItems is undefined or default not changed
 
-8. CLI-08: immediate flag `--help` prints and exits
+8. CLI-08: immediate flag `--help` prints and exits - implemented (tests/cli-parsing.test.ts)
    - Input: ['--help']
    - Expected: `printHelp` invoked; process.exit called with 0 (capture via stub)
 
-9. CLI-09: immediate flag `--list-roles` prints roles and exits
+9. CLI-09: immediate flag `--list-roles` prints roles and exits - implemented (tests/cli-parsing.test.ts)
    - Input: ['--list-roles'] with sample prompts present
    - Expected: Available roles listed and process.exit called with 0
 
-10. CLI-10: combined options parse correctly
+10. CLI-10: combined options parse correctly - implemented (tests/cli-parsing.test.ts)
     - Input: ['--role','review','--task','Fix bug','--structured']
     - Expected: options.role === 'review', options.task === 'Fix bug', options.structured === true
 
-11. CLI-11: isOption recognizes only prefixed, known aliases
+11. CLI-11: isOption recognizes only prefixed, known aliases - implemented (tests/cli-parsing.test.ts)
     - Input: '--role', '--unknown' -> isOption('--role') true, isOption('--unknown') false
 
-12. CLI-12: applyBooleanOption consumes tokens correctly
+12. CLI-12: applyBooleanOption consumes tokens correctly - implemented (tests/cli-parsing.test.ts)
     - Scenario: Flag followed by another option token
     - Input: applyBooleanOption(options,'verbose','--role')
     - Expected: sets verbose=true and returns 1 consumed token
 
-13. CLI-13: parseBoolean returns undefined for non-boolean inputs
+13. CLI-13: parseBoolean returns undefined for non-boolean inputs - implemented (tests/cli-parsing.test.ts)
 
 - Input: parseBoolean('yes')
 - Expected: === undefined
 
-1. CLI-14: isOption returns false for undefined or short/invalid tokens
+1. CLI-14: isOption returns false for undefined or short/invalid tokens - implemented (tests/cli-parsing.test.ts)
 
 - Input: undefined, '-h', 'role'
 - Expected: isOption returns false for each
 
-1. CLI-15: isBooleanOption returns false for non-boolean keys
+1. CLI-15: isBooleanOption returns false for non-boolean keys - implemented (tests/cli-parsing.test.ts)
 
 - Input: 'task'
 - Expected: isBooleanOption('task') === false
 
-1. CLI-16: applyBooleanOption consumes 2 tokens for explicit booleans
+1. CLI-16: applyBooleanOption consumes 2 tokens for explicit booleans - implemented (tests/cli-parsing.test.ts)
 
 - Input: applyBooleanOption(options,'verbose','false')
 - Expected: sets verbose=false and returns 2
 
-1. CLI-17: repeated options - last occurrence wins
+1. CLI-17: repeated options - last occurrence wins - implemented (tests/cli-parsing.test.ts)
 
 - Input: ['--max-items','1','--max-items','3']
 - Expected: options.maxItems === 3
+
+---
+
+## ISSUES FOUND (CODE) - CLI Parsing and Helpers
+
+1. Missing JSDoc comments in production files
+   - Path: `src/codex-delegate.ts` (top-level helper functions) and `src/common/file-utils.ts`
+   - Location: near file header / function declarations (e.g., `getCurrentDirname`)
+   - Description: The project's ESLint configuration requires JSDoc comments on functions; several production functions are missing `@returns` and general JSDoc blocks. These surfaced when running `npm run lint` while implementing tests.
+   - Suggested fix: Add appropriate JSDoc comments (including `@returns`) to the affected functions to satisfy lint rules.
+
+2. Vitest discovery oddity when running the full test suite
+   - Path: project root / test runner invocation
+   - Location: Running `npm test` / `vitest --run` prints the configured include pattern but reports `No test files found`. Running an individual test file (`npx vitest tests/cli-parsing.test.ts --run`) executes the tests successfully.
+   - Description: This may be an environment/runner configuration issue that prevented the default test discovery path from matching test files in this workspace during the initial run. Tests themselves are well-formed and pass when executed directly.
+   - Suggested fix: Investigate Vitest discovery behavior (version-specific flags or CLI invocation) in CI and ensure the harness runs tests without specifying file paths (no code change necessary for production behavior).
 
 ---
 
@@ -385,7 +401,3 @@ This document enumerates comprehensive test cases to validate the behavior of th
 - Start by unit tests for: CLI parsing, prompt/template reading, schema resolution, and streaming guards. (High confidence and low setup.)
 - Next, tests for `processStream` behaviors (timeouts, error handling, log stream I/O).
 - Finish with integration/e2e simulations using mocked `Codex`.
-
----
-
-This list is intentionally thorough to give confidence during a multi-step refactor. If you want, I can convert these test cases into a test scaffold (Vitest test files + fixtures) and implement the highest-priority ones first.
