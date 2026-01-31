@@ -29,14 +29,20 @@ beforeEach(async () => {
 });
 
 describe('Option Validation', () => {
+  const baseOptions = { role: 'tester', task: 'exercise', instructions: 'none' };
+
   it('VAL-01: valid reasoning allowed', () => {
-    expect(() => helpers.validateOptions({ reasoning: 'low' as const })).not.toThrow();
+    expect(() =>
+      helpers.validateOptions({ ...baseOptions, reasoning: 'low' as const }),
+    ).not.toThrow();
   });
 
   it('VAL-02: invalid reasoning throws descriptive Error', () => {
-    expect(() => helpers.validateOptions({ reasoning: 'ultra' as unknown as string })).toThrow();
+    expect(() =>
+      helpers.validateOptions({ ...baseOptions, reasoning: 'ultra' as unknown as string }),
+    ).toThrow();
     try {
-      helpers.validateOptions({ reasoning: 'ultra' as unknown as string });
+      helpers.validateOptions({ ...baseOptions, reasoning: 'ultra' as unknown as string });
     } catch (err: unknown) {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('--reasoning');
@@ -46,9 +52,16 @@ describe('Option Validation', () => {
   });
 
   it('VAL-03: invalid sandbox throws descriptive Error', () => {
-    expect(() => helpers.validateOptions({ sandbox: 'nope' as unknown as string })).toThrow();
+    // cast to `any` to simulate invalid runtime value that TypeScript cannot represent in the narrow union
+    expect(() =>
+      helpers.validateOptions({ ...baseOptions, sandbox: 'nope' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]),
+    ).toThrow();
     try {
-      helpers.validateOptions({ sandbox: 'nope' as unknown as string });
+      helpers.validateOptions({ ...baseOptions, sandbox: 'nope' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]);
     } catch (err: unknown) {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('--sandbox');
@@ -57,9 +70,15 @@ describe('Option Validation', () => {
   });
 
   it('VAL-04: invalid approval throws descriptive Error', () => {
-    expect(() => helpers.validateOptions({ approval: 'sometimes' as unknown as string })).toThrow();
+    expect(() =>
+      helpers.validateOptions({ ...baseOptions, approval: 'sometimes' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]),
+    ).toThrow();
     try {
-      helpers.validateOptions({ approval: 'sometimes' as unknown as string });
+      helpers.validateOptions({ ...baseOptions, approval: 'sometimes' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]);
     } catch (err: unknown) {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('--approval');
@@ -68,9 +87,15 @@ describe('Option Validation', () => {
   });
 
   it('VAL-05: invalid web-search throws descriptive Error', () => {
-    expect(() => helpers.validateOptions({ webSearch: 'liveish' as unknown as string })).toThrow();
+    expect(() =>
+      helpers.validateOptions({ ...baseOptions, webSearch: 'liveish' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]),
+    ).toThrow();
     try {
-      helpers.validateOptions({ webSearch: 'liveish' as unknown as string });
+      helpers.validateOptions({ ...baseOptions, webSearch: 'liveish' } as unknown as Parameters<
+        typeof helpers.validateOptions
+      >[0]);
     } catch (err: unknown) {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('--web-search');
