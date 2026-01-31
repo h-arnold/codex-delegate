@@ -7,6 +7,23 @@ It covers formatting (Prettier), linting (ESLint), TypeScript typing expectation
 
 ## Table of contents
 
+- [Code Style Guide ✅](#code-style-guide-)
+  - [Table of contents](#table-of-contents)
+  - [Purpose](#purpose)
+  - [Formatting (Prettier) ✨](#formatting-prettier-)
+  - [Linting (ESLint) 🔍](#linting-eslint-)
+  - [Linting (ESLint) 🔍](#linting-eslint--1)
+  - [TypeScript expectations 🎯](#typescript-expectations-)
+  - [JSDoc policy — REQUIRED for every class, method, and function 📝](#jsdoc-policy--required-for-every-class-method-and-function-)
+  - [JSDoc Templates \& Examples](#jsdoc-templates--examples)
+    - [Function example (exported)](#function-example-exported)
+    - [Class and method example](#class-and-method-example)
+    - [Arrow function / private helper example](#arrow-function--private-helper-example)
+  - [Examples: Good vs Bad](#examples-good-vs-bad)
+  - [Tooling \& enforcement ✅](#tooling--enforcement-)
+  - [Editor / IDE tips 👩‍💻](#editor--ide-tips-)
+  - [Checklist for PRs ✅](#checklist-for-prs-)
+
 ## Purpose
 
 This project values consistent, readable, and well-documented code. The rules below are intended to:
