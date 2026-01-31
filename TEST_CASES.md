@@ -237,73 +237,78 @@ ISSUES FOUND (CODE) - Schema Resolution
 
 ## Stream Handling and Event Processing
 
-1. STREAM-01: item.completed with agent_message sets finalResponse
+1. STREAM-01: item.completed with agent_message sets finalResponse - implemented (tests/stream-handling.test.ts)
    - Input: event item.completed agent_message text='OK'
    - Expected: results.finalResponse === 'OK'
 
-2. STREAM-02: item.completed with command_execution appends command
+2. STREAM-02: item.completed with command_execution appends command - implemented (tests/stream-handling.test.ts)
    - Input: event command_execution command='ls'
    - Expected: results.commands includes 'ls'
 
-3. STREAM-03: item.completed with file_change appends formatted files
+3. STREAM-03: item.completed with file_change appends formatted files - implemented (tests/stream-handling.test.ts)
    - Input: changes [{kind:'modified', path:'src/a.ts'}]
    - Expected: results.fileChanges includes 'modified: src/a.ts'
 
-4. STREAM-04: item.completed with mcp_tool_call appends server:tool
+4. STREAM-04: item.completed with mcp_tool_call appends server:tool - implemented (tests/stream-handling.test.ts)
    - Input: server='s', tool='t'
    - Expected: results.toolCalls includes 's:t'
 
-5. STREAM-05: item.completed with web_search appends query
+5. STREAM-05: item.completed with web_search appends query - implemented (tests/stream-handling.test.ts)
    - Input: web_search query='query'
    - Expected: results.webQueries includes 'query'
 
-6. STREAM-06: turn.completed sets usage summary
+6. STREAM-06: turn.completed sets usage summary - implemented (tests/stream-handling.test.ts)
    - Input: event with usage { input_tokens: 3, output_tokens: 4 }
    - Expected: results.usageSummary matches expected string
 
-7. STREAM-07: turn.failed throws with the event error message
+7. STREAM-07: turn.failed throws with the event error message - implemented (tests/stream-handling.test.ts)
    - Input: event turn.failed with error.message
    - Expected: processStream rejects with that Error
 
-8. STREAM-08: error event throws with message
+8. STREAM-08: error event throws with message - implemented (tests/stream-handling.test.ts)
    - Input: event error with message
    - Expected: processStream rejects with Error
 
-9. STREAM-09: stream reading respects timeout and rejects with timeout message
+9. STREAM-09: stream reading respects timeout and rejects with timeout message - implemented (tests/stream-handling.test.ts)
    - Input: stream that never yields -> set very small timeoutMs
    - Expected: rejected Error mentioning timeout minutes
 
-10. STREAM-10: processStream writes raw events to logStream and verbose outputs
+10. STREAM-10: processStream writes raw events to logStream and verbose outputs - implemented (tests/stream-handling.test.ts)
     - Setup: provide a mock writable logStream and options.verbose true
     - Input: a small series of events
     - Expected: logStream.write called with JSON lines; stdout wrote event JSON
 
-11. STREAM-11: iterator.return is called in finally, even on error
+11. STREAM-11: iterator.return is called in finally, even on error - implemented (tests/stream-handling.test.ts)
     - Setup: use a generator with side-effect when return called
     - Expected: the side-effect executed
 
-12. STREAM-12: processStream handles an immediately-ending stream (no events)
+12. STREAM-12: processStream handles an immediately-ending stream (no events) - implemented (tests/stream-handling.test.ts)
     - Setup: async iterable that yields nothing
     - Expected: returns empty StreamResults (empty arrays/strings)
 
-13. STREAM-13: iterator.next throws -> processStream propagates error and calls iterator.return
+13. STREAM-13: iterator.next throws -> processStream propagates error and calls iterator.return - implemented (tests/stream-handling.test.ts)
     - Setup: async iterator whose `next` throws
     - Expected: processStream rejects with the error and iterator.return was invoked
 
-14. STREAM-14: handleItemCompleted ignores unknown item types (no mutation)
+14. STREAM-14: handleItemCompleted ignores unknown item types (no mutation) - implemented (tests/stream-handling.test.ts)
     - Input: item { type: 'unknown' }
     - Expected: results remain unchanged
 
 ---
 
-## Streaming Guards & Handlers (unit tests)
+## Streaming Guards & Handlers (unit tests) - implemented (tests/guards.test.ts)
 
-1. GUARD-01: isAgentMessage returns true only for agent_message with text string
-2. GUARD-02: isCommandExecution returns true only for type 'command_execution' with string command
-3. GUARD-03: isFileChangeArray returns false for malformed arrays or missing fields
-4. GUARD-04: isFileChangeItem returns true when item.type === 'file_change' and changes validate
-5. GUARD-05: isMcpToolCall returns true only when server & tool strings present
-6. GUARD-06: isWebSearch returns true only for type 'web_search' with string query
+1. GUARD-01: isAgentMessage returns true only for agent_message with text string - implemented (tests/guards.test.ts)
+2. GUARD-02: isCommandExecution returns true only for type 'command_execution' with string command - implemented (tests/guards.test.ts)
+3. GUARD-03: isFileChangeArray returns false for malformed arrays or missing fields - implemented (tests/guards.test.ts)
+4. GUARD-04: isFileChangeItem returns true when item.type === 'file_change' and changes validate - implemented (tests/guards.test.ts)
+5. GUARD-05: isMcpToolCall returns true only when server & tool strings present - implemented (tests/guards.test.ts)
+6. GUARD-06: isWebSearch returns true only for type 'web_search' with string query - implemented (tests/guards.test.ts)
+
+### ISSUES FOUND (CODE) - Streaming Guards & Handlers
+
+- isFileChangeArray accepts empty arrays and returns `true` for `[]`. This may be surprising for callers that expect at least one file change; consider whether empty arrays should be treated as invalid in future changes.
+- The guards are permissive regarding empty strings (e.g., `server: ''` in `isMcpToolCall` is treated as valid). If an empty value should be considered invalid, additional checks should be added.
 
 ---
 
