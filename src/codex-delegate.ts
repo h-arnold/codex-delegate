@@ -97,7 +97,10 @@ async function run(): Promise<void> {
     logStream = createWriteStream(resolved, { flags: 'a' });
   }
 
-  const codex = new Codex();
+  const codex =
+    options.overrideWireApi === false
+      ? new Codex()
+      : new Codex({ config: { wire_api: 'responses' } });
   // Ensure the reasoning option is narrowed to the allowed literal union before
   // passing it into the Codex API.
   let reasoningArg: ReasoningLevel | undefined;

@@ -16,6 +16,7 @@ const DEFAULT_OPTIONS: DelegateOptions = {
   webSearch: 'live',
   verbose: false,
   timeoutMinutes: 10,
+  overrideWireApi: true,
 };
 
 export { DEFAULT_OPTIONS };

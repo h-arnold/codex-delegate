@@ -22,6 +22,7 @@ type DelegateOptions = {
   logFile?: string;
   maxItems?: number;
   timeoutMinutes?: number;
+  overrideWireApi?: boolean;
 };
 
 export type { DelegateOptions };

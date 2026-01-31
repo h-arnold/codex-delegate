@@ -23,12 +23,13 @@ const ARG_ALIASES: Record<string, keyof DelegateOptions> = {
   '--log-file': 'logFile',
   '--max-items': 'maxItems',
   '--timeout-minutes': 'timeoutMinutes',
+  '--override-wire-api': 'overrideWireApi',
 };
 
 /**
  * List of boolean CLI option keys.
  */
-const BOOLEAN_KEYS = ['network', 'verbose', 'structured'] as const;
+const BOOLEAN_KEYS = ['network', 'verbose', 'structured', 'overrideWireApi'] as const;
 
 /**
  * Allowed reasoning effort levels.

@@ -33,6 +33,7 @@ function printHelp(): void {
       '  --log-file <path>         Path to write a verbose event log',
       '  --max-items <n>           Limit number of items printed in summaries',
       '  --timeout-minutes <n>     Timeout in minutes (default: 10)',
+      '  --override-wire-api <true|false> Override wire_api to responses (default: true)',
       '  --list-roles              Print available prompt roles and exit',
       '  --help, -h                Show this help message',
       '',

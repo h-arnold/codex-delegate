@@ -71,6 +71,11 @@ describe('CLI Parsing and Helpers', () => {
     expect(opts.verbose).toBe(true);
   });
 
+  it('CLI-03A: parse override wire API flag with explicit false', () => {
+    const opts = helpers.parseArgs(['--override-wire-api', 'false']);
+    expect(opts.overrideWireApi).toBe(false);
+  });
+
   it('CLI-04: parse unknown option is ignored', () => {
     const opts = helpers.parseArgs(['--nope', 'value']);
     // unknown option should be ignored and not set as a property
