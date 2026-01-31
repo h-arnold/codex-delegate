@@ -396,6 +396,10 @@ ISSUES FOUND (CODE) - Schema Resolution
    - Setup: create log file, write lines, enable verbose/logFile and allow the interval to tick
    - Expected: stdout includes "Sub-agent progress (last 5 log lines):" and the tail lines
 
+Implemented: E2E-01..E2E-03 ✅
+
+- Tests located at: `tests/e2e.test.ts`
+
 ---
 
 ## Notes & Test Utilities
