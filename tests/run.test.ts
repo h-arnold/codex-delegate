@@ -32,7 +32,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock Codex SDK to satisfy import
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+    vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
       Codex: class {},
     }));
 
@@ -54,7 +54,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock codex sdk
-    vi.mock('@openai/codex-sdk', () => {
+    vi.mock('codex-sdk', () => {
       return {
         Codex: class {
           /**
@@ -99,7 +99,7 @@ describe('Runner (run / main) behavior', () => {
     process.argv = ['node', 'p', '--task', 'x', '--log-file', path.resolve('/etc/hosts')];
     vi.resetModules();
 
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+    vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
       Codex: class {},
     }));
 
@@ -121,7 +121,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock the codex sdk to return a controllable thread
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.mock('codex-sdk', () => ({
       Codex: class {
         /**
          * Start a stubbed thread implementation for tests.
@@ -168,7 +168,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock codex sdk
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.mock('codex-sdk', () => ({
       Codex: class {
         /**
          * Start a stubbed thread implementation for tests.
@@ -214,7 +214,7 @@ describe('Runner (run / main) behavior', () => {
     };
     slot.__startThreadArgs = undefined;
 
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => {
+    vi.mock('codex-sdk', (): { Codex: new () => unknown } => {
       return {
         Codex: class {
           /**

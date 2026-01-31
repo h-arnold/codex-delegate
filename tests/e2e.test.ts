@@ -41,7 +41,7 @@ describe('Integration / End-to-End Scenarios', () => {
       }),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.mock('codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}
@@ -82,16 +82,14 @@ describe('Integration / End-to-End Scenarios', () => {
     vi.resetModules();
 
     (globalThis as unknown as Record<string, unknown>).__test_thread = {
-      runStreamed: vi
-        .fn()
-        .mockImplementation(() =>
-          Promise.resolve({
-            events: makeEventStream([{ type: 'turn.failed', error: { message: 'delegate-boom' } }]),
-          }),
-        ),
+      runStreamed: vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          events: makeEventStream([{ type: 'turn.failed', error: { message: 'delegate-boom' } }]),
+        }),
+      ),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.mock('codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}
@@ -141,7 +139,7 @@ describe('Integration / End-to-End Scenarios', () => {
       runStreamed: vi.fn().mockResolvedValue({ events: emptyStream() }),
     } as unknown as Record<string, unknown>;
 
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.mock('codex-sdk', () => ({
       Codex: class {
         /**
          * @returns {unknown}

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import type { StreamedItem } from './helpers';
 
-vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
   Codex: class {
     /**
      * Return a mock `startThread` implementation.

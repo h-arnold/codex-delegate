@@ -18,7 +18,7 @@ export default tseslint.config(
       vitest,
       security,
       import: importPlugin,
-      jsdoc: jsdoc,
+      jsdoc,
     },
   },
   {

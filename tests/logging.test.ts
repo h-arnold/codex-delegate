@@ -153,7 +153,7 @@ describe('Logging and Output helpers', () => {
     vi.resetModules();
 
     // mock the codex sdk to return a controllable thread via a global slot
-    vi.mock('@openai/codex-sdk', () => {
+    vi.mock('codex-sdk', () => {
       return {
         Codex: class {
           /**
@@ -180,11 +180,9 @@ describe('Logging and Output helpers', () => {
 
     // set up the thread to return a stream that will cause processStream to throw
     (globalThis as unknown as Record<string, unknown>).__test_thread = {
-      runStreamed: vi
-        .fn()
-        .mockResolvedValue({
-          events: makeEventStream([{ type: 'turn.failed', error: { message: 'boom' } }]),
-        }),
+      runStreamed: vi.fn().mockResolvedValue({
+        events: makeEventStream([{ type: 'turn.failed', error: { message: 'boom' } }]),
+      }),
     } as unknown as Record<string, unknown>;
 
     // import a fresh copy of the module under test so our mock is used

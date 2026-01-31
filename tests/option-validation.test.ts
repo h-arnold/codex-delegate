@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /** Mock the codex SDK before importing the module to avoid network code */
-vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
   Codex: class {
     /**
      * Return a mock thread with a `runStreamed` method that emits no events.
