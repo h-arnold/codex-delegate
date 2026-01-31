@@ -227,6 +227,12 @@ ISSUES FOUND (CODE) - Option Validation
    - Input: options without `structured` or `schemaFile`
    - Expected: returns undefined
 
+Implemented: SCHEMA-01..SCHEMA-07 ✅
+
+ISSUES FOUND (CODE) - Schema Resolution
+
+- None found. The implementation of `resolveOutputSchema` validated file paths inside the project, distinguished missing files and JSON parse errors, and returned the default schema when `--structured` is set without a `--schema-file`.
+
 ---
 
 ## Stream Handling and Event Processing
