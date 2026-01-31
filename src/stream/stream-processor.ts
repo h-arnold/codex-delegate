@@ -69,26 +69,18 @@ function handleItemCompleted(item: StreamedItem, results: StreamResults): void {
 function emitStreamUpdate(item: StreamedItem): void {
   switch (item.type) {
     case 'command_execution':
-      if (isCommandExecution(item)) {
-        process.stdout.write(`Command executed: ${item.command}\n`);
-      }
+      process.stdout.write(`Command executed: ${item.command}\n`);
       break;
     case 'file_change':
-      if (isFileChangeItem(item)) {
-        item.changes.forEach((change) => {
-          process.stdout.write(`File change: ${change.kind}: ${change.path}\n`);
-        });
-      }
+      item.changes.forEach((change) => {
+        process.stdout.write(`File change: ${change.kind}: ${change.path}\n`);
+      });
       break;
     case 'mcp_tool_call':
-      if (isMcpToolCall(item)) {
-        process.stdout.write(`Tool call: ${item.server}:${item.tool}\n`);
-      }
+      process.stdout.write(`Tool call: ${item.server}:${item.tool}\n`);
       break;
     case 'web_search':
-      if (isWebSearch(item)) {
-        process.stdout.write(`Web search: ${item.query}\n`);
-      }
+      process.stdout.write(`Web search: ${item.query}\n`);
       break;
     default:
       break;
