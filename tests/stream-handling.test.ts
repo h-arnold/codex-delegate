@@ -19,7 +19,7 @@ type SmallOpts = {
   timeoutMinutes?: number;
 };
 
-vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
+vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
   Codex: class {},
 }));
 
@@ -113,6 +113,80 @@ describe('Stream Handling and Event Processing', () => {
     };
     const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.webQueries).toEqual(['query']);
+  });
+
+  it('STREAM-05B: command_execution emits a streamed stdout update', async () => {
+    const events: StreamedEvent[] = [
+      { type: 'item.completed', item: { type: 'command_execution', command: 'echo hi' } },
+    ];
+    const opts: SmallOpts = {
+      role: 'impl',
+      task: 't',
+      instructions: '',
+      verbose: false,
+      timeoutMinutes: 1,
+    };
+    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Command executed: echo hi'));
+  });
+
+  it('STREAM-05C: file_change emits streamed stdout updates', async () => {
+    const events: StreamedEvent[] = [
+      {
+        type: 'item.completed',
+        item: {
+          type: 'file_change',
+          changes: [
+            { kind: 'update', path: 'src/file.ts' },
+            { kind: 'add', path: 'src/extra.ts' },
+          ],
+        },
+      },
+    ];
+    const opts: SmallOpts = {
+      role: 'impl',
+      task: 't',
+      instructions: '',
+      verbose: false,
+      timeoutMinutes: 1,
+    };
+    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    expect(stdoutWrite).toHaveBeenCalledWith(
+      expect.stringContaining('File change: update: src/file.ts'),
+    );
+    expect(stdoutWrite).toHaveBeenCalledWith(
+      expect.stringContaining('File change: add: src/extra.ts'),
+    );
+  });
+
+  it('STREAM-05D: mcp_tool_call emits a streamed stdout update', async () => {
+    const events: StreamedEvent[] = [
+      { type: 'item.completed', item: { type: 'mcp_tool_call', server: 'a', tool: 'b' } },
+    ];
+    const opts: SmallOpts = {
+      role: 'impl',
+      task: 't',
+      instructions: '',
+      verbose: false,
+      timeoutMinutes: 1,
+    };
+    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Tool call: a:b'));
+  });
+
+  it('STREAM-05E: web_search emits a streamed stdout update', async () => {
+    const events: StreamedEvent[] = [
+      { type: 'item.completed', item: { type: 'web_search', query: 'fast query' } },
+    ];
+    const opts: SmallOpts = {
+      role: 'impl',
+      task: 't',
+      instructions: '',
+      verbose: false,
+      timeoutMinutes: 1,
+    };
+    await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Web search: fast query'));
   });
 
   it('STREAM-06: turn.completed sets usage summary', async () => {
