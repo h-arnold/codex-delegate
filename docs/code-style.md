@@ -34,6 +34,54 @@ This project values consistent, readable, and well-documented code. The rules be
 
 ---
 
+## File & folder structure 📁
+
+Consistent project layout makes it easy to find code, tests, and build artifacts. Use a small number of clear conventions and keep the public surface exported from a single entry.
+
+Recommended layout
+
+```
+/src                    # TypeScript source
+    /features             # feature or domain folders (e.g. delegates, auth)
+        index.ts            # feature-level public exports
+        service.ts
+        types.ts
+        service.spec.ts     # colocated tests (preferred)
+    /cli                  # CLI entry points (if any)
+    /bin                  # small wrappers or executables
+    /internal             # internal-only modules (not exported publicly)
+    index.ts              # package public exports (root barrel)
+    types.ts              # project-wide types
+/tests                  # optional global/integration tests & fixtures
+/docs                   # documentation and design notes
+/examples               # usage examples
+/dist                   # compiled output (gitignored)
+/types                  # ambient types or hand-authored d.ts (optional)
+package.json
+tsconfig.json
+eslint.config.js
+vitest.config.ts
+.prettierrc
+```
+
+Guidelines
+
+- Use src/ as the sole authoring location; compile to dist/ and exclude build output from VCS.
+- Keep public API exports at src/index.ts (and expose types via package.json "types" or "exports" fields).
+- Prefer colocated tests (X.spec.ts next to X.ts) for easy refactors; use a top-level tests/ folder for large integration suites or fixtures.
+- Name feature folders by domain (kebab-case) and files so the primary exported symbol is easy to locate (filename ≈ exported name).
+- Avoid deep, global barrel files that hide dependency boundaries. Use small feature-level barrels that re-export the feature's public pieces.
+- Put internal-only utilities under internal/ or mark them with @internal JSDoc and do not re-export from the package root.
+- Keep configs (tsconfig, eslint, vitest) at the repo root and document any non-obvious layout choices in /docs.
+
+Packaging notes
+
+- Ensure package.json "main"/"module"/"types" point to compiled JS and declaration files in dist/.
+- Add an exports map if you expose subpath entry points; keep it minimal and stable.
+- Do not publish source maps or test-only fixtures unless required.
+
+These conventions keep the repo predictable, make ownership straightforward, and make it easy to produce a clean, typed package for consumers.
+
 ## Formatting (Prettier) ✨
 
 - We use **Prettier** to enforce formatting. The project includes `prettier` as a dev dependency and includes a `.prettierrc` with a Markdown override (shorter `printWidth` for `.md` files).
