@@ -97,6 +97,7 @@ describe('Config defaults and precedence', () => {
       verbose: true,
       structured: true,
       model: 'gpt-test',
+      overrideWireApi: false,
     });
 
     const { parseArgs } = await import('../src/cli/options');
@@ -110,6 +111,7 @@ describe('Config defaults and precedence', () => {
     expect(opts.verbose).toBe(true);
     expect(opts.structured).toBe(true);
     expect(opts.model).toBe('gpt-test');
+    expect(opts.overrideWireApi).toBe(false);
   });
 
   /**
@@ -124,6 +126,7 @@ describe('Config defaults and precedence', () => {
       sandbox: 'read-only',
       approval: 'on-request',
       timeoutMinutes: 12,
+      overrideWireApi: false,
     });
 
     const { parseArgs } = await import('../src/cli/options');
@@ -138,6 +141,8 @@ describe('Config defaults and precedence', () => {
       'never',
       '--timeout-minutes',
       '3',
+      '--override-wire-api',
+      'true',
     ]);
 
     expect(opts.network).toBe(true);
@@ -145,6 +150,7 @@ describe('Config defaults and precedence', () => {
     expect(opts.sandbox).toBe('danger-full-access');
     expect(opts.approval).toBe('never');
     expect(opts.timeoutMinutes).toBe(3);
+    expect(opts.overrideWireApi).toBe(true);
   });
 
   /**
@@ -180,5 +186,6 @@ describe('Config defaults and precedence', () => {
     expect(opts.sandbox).toBe('danger-full-access');
     expect(opts.approval).toBe('never');
     expect(opts.timeoutMinutes).toBe(10);
+    expect(opts.overrideWireApi).toBe(true);
   });
 });

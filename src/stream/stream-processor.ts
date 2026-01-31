@@ -128,6 +128,8 @@ async function processStream(
   const iterator = events[Symbol.asyncIterator]();
   const results = toStreamResults();
   let timeoutId: NodeJS.Timeout | undefined;
+  let heartbeatIntervalId: NodeJS.Timeout | undefined;
+  let lastActivityAt = Date.now();
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -136,6 +138,12 @@ async function processStream(
       );
     }, timeoutMs);
   });
+
+  heartbeatIntervalId = setInterval(() => {
+    if (Date.now() - lastActivityAt >= 60000) {
+      process.stdout.write('agent is still working\n');
+    }
+  }, 60000);
 
   try {
     while (true) {
@@ -147,6 +155,7 @@ async function processStream(
       }
 
       const event = result.value;
+      lastActivityAt = Date.now();
 
       if (logStream) {
         logStream.write(JSON.stringify(event) + '\n');
@@ -177,6 +186,9 @@ async function processStream(
     await iterator.return?.(undefined);
     if (timeoutId) {
       clearTimeout(timeoutId);
+    }
+    if (heartbeatIntervalId) {
+      clearInterval(heartbeatIntervalId);
     }
   }
 

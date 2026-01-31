@@ -119,6 +119,9 @@ function normaliseConfig(raw: Record<string, unknown>): CodexDelegateConfig {
   if (typeof raw.maxItems === 'number' && Number.isFinite(raw.maxItems)) {
     config.maxItems = raw.maxItems;
   }
+  if (typeof raw.overrideWireApi === 'boolean') {
+    config.overrideWireApi = raw.overrideWireApi;
+  }
   if (
     typeof raw.timeoutMinutes === 'number' &&
     Number.isFinite(raw.timeoutMinutes) &&

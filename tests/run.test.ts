@@ -55,6 +55,24 @@ describe('Runner (run / main) behavior', () => {
   };
 
   /**
+   * Write a Codex delegate config file under `.codex`.
+   *
+   * @param {Record<string, unknown>} config - Config values to write.
+   * @returns {string} Full path to the created config file.
+   * @remarks
+   * Ensures the `.codex` directory exists before writing.
+   * @example
+   * writeConfigFile({ overrideWireApi: false });
+   */
+  const writeConfigFile = (config: Record<string, unknown>): string => {
+    ensureCodexDir();
+    const filePath = path.join(codexDir, 'codex-delegate-config.json');
+    fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+    createdCodexFiles.add(filePath);
+    return filePath;
+  };
+
+  /**
    * Clean up any `.codex` role files created during tests.
    *
    * @returns {void}
@@ -166,6 +184,113 @@ describe('Runner (run / main) behavior', () => {
     expect(calls).toContain('Usage: input 1, output 2');
 
     fakeOut.mockRestore();
+  });
+
+  /**
+   * RUN-CONFIG-05: run defaults to overriding wire_api to responses.
+   * @returns {Promise<void>}
+   */
+  it('RUN-CONFIG-05: run defaults to overriding wire_api to responses', async (): Promise<void> => {
+    process.argv = ['node', 'p', '--task', 'x'];
+    vi.resetModules();
+
+    const codexConstructorSpy = vi.fn();
+
+    vi.doMock('@openai/codex-sdk', () => {
+      return {
+        Codex: class {
+          /**
+           * Record the constructor configuration for inspection.
+           *
+           * @param {unknown} config - Configuration passed to Codex.
+           * @returns {void}
+           * @remarks
+           * The test inspects the captured config to confirm wire_api behaviour.
+           * @example
+           * new Codex({ config: { wire_api: 'responses' } });
+           */
+          constructor(config: unknown) {
+            codexConstructorSpy(config);
+          }
+
+          /**
+           * Start a stubbed thread implementation for tests.
+           *
+           * @returns {unknown} A test thread object.
+           */
+          startThread(): unknown {
+            return (globalThis as unknown as Record<string, unknown>).__test_thread;
+          }
+        },
+      };
+    });
+
+    (globalThis as unknown as Record<string, unknown>).__test_thread = {
+      runStreamed: vi.fn().mockResolvedValue({ events: emptyStream() }),
+    } as unknown as Record<string, unknown>;
+
+    const cd = (await import('../src/codex-delegate')) as typeof import('../src/codex-delegate');
+
+    await expect(cd.run()).resolves.toBeUndefined();
+
+    const ctorArg = codexConstructorSpy.mock.calls[0]?.[0] as
+      | { config?: { wire_api?: string } }
+      | undefined;
+    expect(ctorArg?.config?.wire_api).toBe('responses');
+  });
+
+  /**
+   * RUN-CONFIG-06: config disables wire_api override and preserves existing configuration.
+   * @returns {Promise<void>}
+   */
+  it('RUN-CONFIG-06: config disables wire_api override and preserves existing configuration', async (): Promise<void> => {
+    writeConfigFile({ overrideWireApi: false });
+    process.argv = ['node', 'p', '--task', 'x'];
+    vi.resetModules();
+
+    const codexConstructorSpy = vi.fn();
+
+    vi.doMock('@openai/codex-sdk', () => {
+      return {
+        Codex: class {
+          /**
+           * Record the constructor configuration for inspection.
+           *
+           * @param {unknown} config - Configuration passed to Codex.
+           * @returns {void}
+           * @remarks
+           * The test inspects the captured config to confirm wire_api behaviour.
+           * @example
+           * new Codex({ config: { wire_api: 'responses' } });
+           */
+          constructor(config: unknown) {
+            codexConstructorSpy(config);
+          }
+
+          /**
+           * Start a stubbed thread implementation for tests.
+           *
+           * @returns {unknown} A test thread object.
+           */
+          startThread(): unknown {
+            return (globalThis as unknown as Record<string, unknown>).__test_thread;
+          }
+        },
+      };
+    });
+
+    (globalThis as unknown as Record<string, unknown>).__test_thread = {
+      runStreamed: vi.fn().mockResolvedValue({ events: emptyStream() }),
+    } as unknown as Record<string, unknown>;
+
+    const cd = (await import('../src/codex-delegate')) as typeof import('../src/codex-delegate');
+
+    await expect(cd.run()).resolves.toBeUndefined();
+
+    const ctorArg = codexConstructorSpy.mock.calls[0]?.[0] as
+      | { config?: { wire_api?: string } }
+      | undefined;
+    expect(ctorArg?.config?.wire_api).toBeUndefined();
   });
 
   /**

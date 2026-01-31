@@ -39,6 +39,7 @@ Use `--list-roles` to print the discovered role names.
 - `--instructions` (optional, appended to the prompt)
 - `--model`, `--reasoning`, `--working-dir` (model and workspace selection)
 - `--sandbox`, `--approval`, `--network`, `--web-search` (permission controls)
+- `--override-wire-api` (force the Codex CLI to use the responses wire API)
 - `--structured`, `--schema-file` (structured output)
 - `--verbose`, `--log-file`, `--max-items`, `--timeout-minutes` (output controls)
 
@@ -46,7 +47,9 @@ Use `--list-roles` to print the discovered role names.
 
 - Defaults to `sandbox=danger-full-access`, `approval=never`, `network=true`, and `web-search=live`.
 - `timeout-minutes` defaults to `10` and `verbose` defaults to `false`.
+- Uses the standard responses API wire mode by default to avoid unsupported websocket variants.
 - Prints a short summary of commands, file changes, tool calls, and web searches.
+- Emits a heartbeat line (`agent is still working`) every minute when no stream events arrive, so long-running tasks still show activity.
 - Use `--max-items` to cap the number of items shown per section.
 - Use `--verbose` to stream all events and write the raw log to `codex-delegate.log` (or `--log-file`). While logging is active, the runner prints progress updates every minute, showing the last five log lines.
 - Use `--structured` for a built-in JSON schema, or `--schema-file` for a custom schema.
@@ -73,6 +76,7 @@ Running `codex-delegate init` creates `.codex/codex-delegate-config.json` with t
   "approval": "never",
   "network": true,
   "webSearch": "live",
+  "overrideWireApi": true,
   "verbose": false,
   "timeoutMinutes": 10
 }

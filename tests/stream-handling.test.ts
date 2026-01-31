@@ -44,6 +44,35 @@ describe('Stream Handling and Event Processing', () => {
     ...baseOpts,
     ...overrides,
   });
+  /**
+   * Create an async iterable that yields events with per-event delays.
+   *
+   * @param {StreamedEvent[]} events - Events to emit in order.
+   * @param {number[]} delaysMs - Delay in milliseconds before each event.
+   * @returns {AsyncIterable<StreamedEvent>} An iterable yielding the events after the delays.
+   */
+  const makeTimedEventStream = (
+    events: StreamedEvent[],
+    delaysMs: number[],
+  ): AsyncIterable<StreamedEvent> => {
+    return (async function* (): AsyncIterable<StreamedEvent> {
+      for (const [index, event] of events.entries()) {
+        const delayMs = delaysMs[index] ?? 0;
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        yield event;
+      }
+    })();
+  };
+  /**
+   * Count heartbeat messages written to stdout.
+   *
+   * @param {ReturnType<typeof vi.spyOn>} spy - The stdout write spy.
+   * @returns {number} The number of heartbeat messages written.
+   */
+  const countHeartbeats = (spy: ReturnType<typeof vi.spyOn>): number =>
+    spy.mock.calls.filter(([message]) => message === 'agent is still working\n').length;
 
   beforeEach(async () => {
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -235,5 +264,86 @@ describe('Stream Handling and Event Processing', () => {
     };
     const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res).toEqual(helpers.toStreamResults());
+  });
+
+  it('STREAM-15: emits heartbeat after 60s of inactivity', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
+    stdoutWrite.mockClear();
+
+    try {
+      const events: StreamedEvent[] = [
+        { type: 'turn.completed', usage: { input_tokens: 1, output_tokens: 2 } },
+      ];
+      const stream = makeEventStream(events, 61000);
+      const promise = helpers.processStream(stream, createOpts(), undefined, 200000);
+
+      await vi.advanceTimersByTimeAsync(59000);
+      expect(countHeartbeats(stdoutWrite)).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(countHeartbeats(stdoutWrite)).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await promise;
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(countHeartbeats(stdoutWrite)).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('STREAM-16: does not emit heartbeat when activity occurs within 60s', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
+    stdoutWrite.mockClear();
+
+    try {
+      const events: StreamedEvent[] = [
+        { type: 'item.completed', item: { type: 'agent_message', text: 'first' } },
+        { type: 'item.completed', item: { type: 'agent_message', text: 'second' } },
+      ];
+      const stream = makeTimedEventStream(events, [30000, 100000]);
+      const promise = helpers.processStream(stream, createOpts(), undefined, 200000);
+
+      await vi.advanceTimersByTimeAsync(30000);
+      await Promise.resolve();
+
+      await vi.advanceTimersByTimeAsync(30000);
+      expect(countHeartbeats(stdoutWrite)).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(countHeartbeats(stdoutWrite)).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(10000);
+      await promise;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('STREAM-17: clears heartbeat interval after error', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
+    stdoutWrite.mockClear();
+
+    try {
+      const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'boom' } }];
+      const promise = helpers.processStream(
+        makeEventStream(events, 1000),
+        createOpts(),
+        undefined,
+        200000,
+      );
+      const rejection = expect(promise).rejects.toThrow('boom');
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await rejection;
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(countHeartbeats(stdoutWrite)).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

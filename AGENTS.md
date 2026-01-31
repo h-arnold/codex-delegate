@@ -16,6 +16,7 @@ Key notes:
 - Pass `--working-dir` for repo-specific tasks.
 - Common roles: `implementation`, `testing`, `review`, `documentation`.
 - Default permissions are sandboxed with network and web search enabled; override with explicit flags if needed.
+- While a sub-agent is running, expect a heartbeat update (`agent is still working`) roughly every minute if no new stream events arrive.
 
 ## Coding standards
 
