@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -10,10 +11,82 @@ import { makeEventStream, emptyStream } from './helpers';
 describe('Runner (run / main) behavior', () => {
   const originalArgv = process.argv;
   const originalCwd = process.cwd();
+  let tempDir = '';
+  let codexDir = '';
+  let codexDirExisted = false;
+  const createdCodexFiles = new Set<string>();
+  let createdCodexDir = false;
+
+  /**
+   * Ensure the `.codex` directory exists for role files.
+   *
+   * @returns {void}
+   * @remarks
+   * Tracks whether the directory was created for cleanup.
+   * @example
+   * ensureCodexDir();
+   */
+  const ensureCodexDir = (): void => {
+    if (!fs.existsSync(codexDir)) {
+      fs.mkdirSync(codexDir, { recursive: true });
+      if (!codexDirExisted) {
+        createdCodexDir = true;
+      }
+    }
+  };
+
+  /**
+   * Write a role markdown file under `.codex` for tests.
+   *
+   * @param {string} fileName - Role file name to create.
+   * @param {string} contents - File contents.
+   * @returns {string} Full path to the created file.
+   * @remarks
+   * Ensures the `.codex` directory exists.
+   * @example
+   * writeRoleFile('review.md', 'Role instructions');
+   */
+  const writeRoleFile = (fileName: string, contents: string): string => {
+    ensureCodexDir();
+    const filePath = path.join(codexDir, fileName);
+    fs.writeFileSync(filePath, contents);
+    createdCodexFiles.add(filePath);
+    return filePath;
+  };
+
+  /**
+   * Clean up any `.codex` role files created during tests.
+   *
+   * @returns {void}
+   * @remarks
+   * Removes the `.codex` directory only if the tests created it and it is empty.
+   * @example
+   * cleanupCodexDir();
+   */
+  const cleanupCodexDir = (): void => {
+    for (const filePath of createdCodexFiles) {
+      try {
+        fs.rmSync(filePath, { force: true });
+      } catch {}
+    }
+    createdCodexFiles.clear();
+    if (createdCodexDir && fs.existsSync(codexDir) && fs.readdirSync(codexDir).length === 0) {
+      try {
+        fs.rmdirSync(codexDir);
+      } catch {}
+    }
+    createdCodexDir = false;
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
     process.exitCode = 0;
+    createdCodexFiles.clear();
+    createdCodexDir = false;
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-run-'));
+    process.chdir(tempDir);
+    codexDir = path.join(tempDir, '.codex');
+    codexDirExisted = fs.existsSync(codexDir);
   });
 
   afterEach(() => {
@@ -21,18 +94,22 @@ describe('Runner (run / main) behavior', () => {
     try {
       process.chdir(originalCwd);
     } catch {}
+    cleanupCodexDir();
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {}
   });
 
   /**
-   * RUN-01: run throws when required --task missing
+   * RUN-LEGACY-01: run throws when required --task missing
    * @returns {Promise<void>}
    */
-  it('RUN-01: run throws when required --task missing', async (): Promise<void> => {
+  it('RUN-LEGACY-01: run throws when required --task missing', async (): Promise<void> => {
     process.argv = ['node', 'p'];
     vi.resetModules();
 
     // mock Codex SDK to satisfy import
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+    vi.doMock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
       Codex: class {},
     }));
 
@@ -42,10 +119,10 @@ describe('Runner (run / main) behavior', () => {
   });
 
   /**
-   * RUN-02: run resolves and prints summaries & final response on success
+   * RUN-LEGACY-02: run resolves and prints summaries & final response on success
    * @returns {Promise<void>}
    */
-  it('RUN-02: run resolves and prints summaries & final response on success', async (): Promise<void> => {
+  it('RUN-LEGACY-02: run resolves and prints summaries & final response on success', async (): Promise<void> => {
     const fakeOut = vi
       .spyOn(process.stdout, 'write')
       .mockImplementation(() => true as unknown as boolean);
@@ -54,7 +131,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock codex sdk
-    vi.mock('@openai/codex-sdk', () => {
+    vi.doMock('@openai/codex-sdk', () => {
       return {
         Codex: class {
           /**
@@ -92,14 +169,14 @@ describe('Runner (run / main) behavior', () => {
   });
 
   /**
-   * RUN-03: run throws when logFile path outside project
+   * RUN-LEGACY-03: run throws when logFile path outside project
    * @returns {Promise<void>}
    */
-  it('RUN-03: run throws when logFile path outside project', async (): Promise<void> => {
+  it('RUN-LEGACY-03: run throws when logFile path outside project', async (): Promise<void> => {
     process.argv = ['node', 'p', '--task', 'x', '--log-file', path.resolve('/etc/hosts')];
     vi.resetModules();
 
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+    vi.doMock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
       Codex: class {},
     }));
 
@@ -109,10 +186,10 @@ describe('Runner (run / main) behavior', () => {
   });
 
   /**
-   * RUN-04: main catches run's error and sets process.exitCode = 1 and writes message to stderr
+   * RUN-LEGACY-04: main catches run's error and sets process.exitCode = 1 and writes message to stderr
    * @returns {Promise<void>}
    */
-  it("RUN-04: main catches run's error and sets process.exitCode = 1 and writes message to stderr", async (): Promise<void> => {
+  it("RUN-LEGACY-04: main catches run's error and sets process.exitCode = 1 and writes message to stderr", async (): Promise<void> => {
     // ensure run's initial checks don't short-circuit
     process.argv = ['node', 'p', '--task', 'x'];
 
@@ -121,7 +198,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock the codex sdk to return a controllable thread
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.doMock('@openai/codex-sdk', () => ({
       Codex: class {
         /**
          * Start a stubbed thread implementation for tests.
@@ -155,10 +232,10 @@ describe('Runner (run / main) behavior', () => {
   });
 
   /**
-   * RUN-05: run does not validate --role when agent-prompts is missing
+   * RUN-LEGACY-05: run does not validate --role when agent-prompts is missing
    * @returns {Promise<void>}
    */
-  it('RUN-05: run does not validate --role when agent-prompts is missing', async (): Promise<void> => {
+  it('RUN-LEGACY-05: run does not validate --role when agent-prompts is missing', async (): Promise<void> => {
     process.argv = ['node', 'p', '--task', 'x', '--role', 'unknown-role'];
 
     // move cwd to a directory outside the project so listPromptRoles returns []
@@ -168,7 +245,7 @@ describe('Runner (run / main) behavior', () => {
     vi.resetModules();
 
     // mock codex sdk
-    vi.mock('@openai/codex-sdk', () => ({
+    vi.doMock('@openai/codex-sdk', () => ({
       Codex: class {
         /**
          * Start a stubbed thread implementation for tests.
@@ -190,10 +267,10 @@ describe('Runner (run / main) behavior', () => {
   });
 
   /**
-   * RUN-06: Codex integration: startThread and runStreamed invoked with expected arguments
+   * RUN-LEGACY-06: Codex integration: startThread and runStreamed invoked with expected arguments
    * @returns {Promise<void>}
    */
-  it('RUN-06: Codex integration: startThread and runStreamed invoked with expected arguments', async (): Promise<void> => {
+  it('RUN-LEGACY-06: Codex integration: startThread and runStreamed invoked with expected arguments', async (): Promise<void> => {
     process.argv = [
       'node',
       'p',
@@ -214,7 +291,7 @@ describe('Runner (run / main) behavior', () => {
     };
     slot.__startThreadArgs = undefined;
 
-    vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => {
+    vi.doMock('@openai/codex-sdk', (): { Codex: new () => unknown } => {
       return {
         Codex: class {
           /**
@@ -250,5 +327,101 @@ describe('Runner (run / main) behavior', () => {
     expect((mockRun.mock!.calls as unknown[][])[0][1]).toBeTruthy();
     const callArg = (mockRun.mock!.calls as unknown[][])[0][1] as Record<string, unknown>;
     expect(callArg.outputSchema).toBeDefined();
+  });
+
+  /**
+   * RUN-01: warn when no roles exist and continue without role instructions.
+   *
+   * @returns {Promise<void>}
+   */
+  it('RUN-01: warns when no roles exist and continues', async (): Promise<void> => {
+    process.argv = ['node', 'p', '--task', 'x'];
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-no-roles-'));
+    process.chdir(tempDir);
+
+    vi.resetModules();
+
+    vi.doMock('@openai/codex-sdk', () => ({
+      Codex: class {
+        /**
+         * Start a stubbed thread implementation for tests.
+         * @returns {unknown} A test thread object
+         */
+        startThread(): unknown {
+          return (globalThis as unknown as Record<string, unknown>).__test_thread;
+        }
+      },
+    }));
+
+    (globalThis as unknown as Record<string, unknown>).__test_thread = {
+      runStreamed: vi.fn().mockResolvedValue({ events: emptyStream() }),
+    } as unknown as Record<string, unknown>;
+
+    const stdoutSpy = vi
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true as unknown as boolean);
+    const stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true as unknown as boolean);
+
+    const cd = (await import('../src/codex-delegate')) as typeof import('../src/codex-delegate');
+
+    await expect(cd.run()).resolves.toBeUndefined();
+
+    const stdoutText = stdoutSpy.mock.calls.map((call) => String(call[0])).join('');
+    const stderrText = stderrSpy.mock.calls.map((call) => String(call[0])).join('');
+    expect(stdoutText + stderrText).toMatch(/no roles/i);
+
+    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  /**
+   * RUN-02: unknown role throws when roles exist.
+   *
+   * @returns {Promise<void>}
+   */
+  it('RUN-02: unknown role throws when roles exist', async (): Promise<void> => {
+    writeRoleFile('review.md', 'Review role');
+    process.argv = ['node', 'p', '--task', 'x', '--role', 'unknown-role'];
+    vi.resetModules();
+
+    vi.doMock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+      Codex: class {},
+    }));
+
+    const cd = (await import('../src/codex-delegate')) as typeof import('../src/codex-delegate');
+
+    await expect(cd.run()).rejects.toThrow(/Available roles:/);
+  });
+
+  /**
+   * RUN-03: list-roles reports available roles from `.codex`.
+   *
+   * @returns {Promise<void>}
+   */
+  it('RUN-03: list-roles reports available roles from .codex', async (): Promise<void> => {
+    writeRoleFile('review.md', 'Review role');
+    vi.resetModules();
+
+    vi.doMock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+      Codex: class {},
+    }));
+
+    const cd = (await import('../src/codex-delegate')) as typeof import('../src/codex-delegate');
+
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as unknown as never);
+
+    cd.handleImmediateFlag('--list-roles');
+
+    const output = infoSpy.mock.calls.map((call) => String(call[0])).join('');
+    expect(output).toContain('review');
+
+    infoSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });
