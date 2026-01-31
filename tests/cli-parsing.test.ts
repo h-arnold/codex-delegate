@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SpyInstance } from 'vitest';
 
 /** Mock the codex SDK before importing the module to avoid missing dependency errors */
-vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
+vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
   Codex: class {
     /**
      * Return a mock thread with a `runStreamed` method that emits no events.

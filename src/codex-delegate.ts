@@ -1,15 +1,12 @@
 import { createWriteStream, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-import { Codex, type StreamedEvent, type StreamedItem } from '@openai/codex-sdk';
+import { Codex, type StreamedEvent, type StreamedItem } from 'codex-sdk';
 
 // Determine a sensible project-relative "current directory". Prefer the
 // directory containing the `src` module when possible; fall back to the
 // project's `src` directory in environments where `import.meta.url` cannot be
 // resolved by older tooling or during some test harnesses.
-/**
- *
- */
 /**
  * Determine a safe current directory for the project relative operations.
  * @returns {string} The directory path to use as the current project `src` directory.

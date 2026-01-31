@@ -1,4 +1,4 @@
-declare module '@openai/codex-sdk' {
+declare module 'codex-sdk' {
   export type ModelReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
   export interface AgentMessage {

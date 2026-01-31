@@ -18,13 +18,23 @@ type SmallOpts = {
   verbose?: boolean;
   timeoutMinutes?: number;
 };
-import { processStream, toStreamResults } from '../src/codex-delegate';
+
+vi.mock('codex-sdk', (): { Codex: new () => unknown } => ({
+  Codex: class {},
+}));
+
+let helpers: typeof import('../src/codex-delegate');
 
 describe('Stream Handling and Event Processing', () => {
   let stdoutWrite: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    helpers = undefined as unknown as typeof import('../src/codex-delegate');
     stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+  });
+
+  beforeEach(async () => {
+    helpers = await import('../src/codex-delegate');
   });
 
   afterEach(() => {
@@ -42,7 +52,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.finalResponse).toBe('OK');
   });
 
@@ -57,7 +67,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.commands).toEqual(['ls']);
   });
 
@@ -75,7 +85,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.fileChanges).toEqual(['modified: src/a.ts']);
   });
 
@@ -90,7 +100,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.toolCalls).toEqual(['s:t']);
   });
 
@@ -105,7 +115,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.webQueries).toEqual(['query']);
   });
 
@@ -120,7 +130,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
     expect(res.usageSummary).toMatch(/Usage: input 3, output 4/);
   });
 
@@ -133,9 +143,9 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    await expect(processStream(makeEventStream(events), opts, undefined, 1000)).rejects.toThrow(
-      'failure',
-    );
+    await expect(
+      helpers.processStream(makeEventStream(events), opts, undefined, 1000),
+    ).rejects.toThrow('failure');
   });
 
   it('STREAM-08: error event throws with message', async () => {
@@ -147,9 +157,9 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    await expect(processStream(makeEventStream(events), opts, undefined, 1000)).rejects.toThrow(
-      'boom',
-    );
+    await expect(
+      helpers.processStream(makeEventStream(events), opts, undefined, 1000),
+    ).rejects.toThrow('boom');
   });
 
   it('STREAM-09: stream reading respects timeout and rejects with timeout message', async () => {
@@ -160,7 +170,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 0.001,
     };
-    const p = processStream(nonResolvingNextWithReturn(), opts, undefined, 0);
+    const p = helpers.processStream(nonResolvingNextWithReturn(), opts, undefined, 0);
     // allow the scheduled timeout to run
     await Promise.resolve();
     await expect(p).rejects.toThrow(/timed out/);
@@ -179,7 +189,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: true,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, logStream, 1000);
+    const res = await helpers.processStream(makeEventStream(events), opts, logStream, 1000);
     expect(res.finalResponse).toBe('hi');
     expect(write).toHaveBeenCalled();
     expect(stdoutWrite).toHaveBeenCalled();
@@ -196,7 +206,7 @@ describe('Stream Handling and Event Processing', () => {
       timeoutMinutes: 1,
     };
     await expect(
-      processStream(withReturnFlag(events, flag), opts, undefined, 1000),
+      helpers.processStream(withReturnFlag(events, flag), opts, undefined, 1000),
     ).rejects.toThrow('oops');
     expect(flag.called).toBe(true);
   });
@@ -209,8 +219,8 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(emptyStream(), opts, undefined, 1000);
-    expect(res).toEqual(toStreamResults());
+    const res = await helpers.processStream(emptyStream(), opts, undefined, 1000);
+    expect(res).toEqual(helpers.toStreamResults());
   });
 
   it('STREAM-13: iterator.next throws -> processStream propagates error and calls iterator.return', async () => {
@@ -222,15 +232,15 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    await expect(processStream(throwingNextStream(flag), opts, undefined, 1000)).rejects.toThrow(
-      'sync-next-throw',
-    );
+    await expect(
+      helpers.processStream(throwingNextStream(flag), opts, undefined, 1000),
+    ).rejects.toThrow('sync-next-throw');
     expect(flag.returned).toBe(true);
 
     const flag2: { returned?: boolean } = {};
-    await expect(processStream(rejectingNextStream(flag2), opts, undefined, 1000)).rejects.toThrow(
-      'async-next-throw',
-    );
+    await expect(
+      helpers.processStream(rejectingNextStream(flag2), opts, undefined, 1000),
+    ).rejects.toThrow('async-next-throw');
     expect(flag2.returned).toBe(true);
   });
 
@@ -245,7 +255,7 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await processStream(makeEventStream(events), opts, undefined, 1000);
-    expect(res).toEqual(toStreamResults());
+    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    expect(res).toEqual(helpers.toStreamResults());
   });
 });
