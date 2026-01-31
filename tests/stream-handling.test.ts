@@ -28,12 +28,8 @@ let helpers: typeof import('../src/codex-delegate');
 describe('Stream Handling and Event Processing', () => {
   let stdoutWrite: ReturnType<typeof vi.spyOn>;
 
-  beforeEach(() => {
-    helpers = undefined as unknown as typeof import('../src/codex-delegate');
-    stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-  });
-
   beforeEach(async () => {
+    stdoutWrite = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     helpers = await import('../src/codex-delegate');
   });
 
