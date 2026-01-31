@@ -103,17 +103,14 @@ describe('Prompt Templates', () => {
   });
 
   it('PROMPT-05: listPromptRoles returns [] when directory missing', () => {
-    const orig = path.join(process.cwd(), 'src', 'agent-prompts');
-    const tmp = path.join(process.cwd(), 'src', 'agent-prompts.bak');
-    // rename the directory to simulate missing
-    fs.renameSync(orig, tmp);
+    // Simulate missing directory by resolving outside of project cwd
+    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/agent-prompts');
     try {
       const roles = helpers.listPromptRoles();
       expect(Array.isArray(roles)).toBe(true);
       expect(roles.length).toBe(0);
     } finally {
-      // restore
-      fs.renameSync(tmp, orig);
+      spy.mockRestore();
     }
   });
 
@@ -137,18 +134,16 @@ describe('Prompt Templates', () => {
     const exitSpy = vi
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as unknown as never);
-    const orig = path.join(process.cwd(), 'src', 'agent-prompts');
-    const tmp = path.join(process.cwd(), 'src', 'agent-prompts.bak');
-    // rename to simulate missing/empty
-    fs.renameSync(orig, tmp);
+    // Simulate missing prompts directory by resolving path outside project cwd
+    const spy = vi.spyOn(path, 'resolve').mockReturnValue('/outside/project/agent-prompts');
     try {
       helpers.handleImmediateFlag('--list-roles');
       expect(infoSpy).toHaveBeenCalledWith('No roles available.');
       expect(exitSpy).toHaveBeenCalledWith(0);
     } finally {
+      spy.mockRestore();
       infoSpy.mockRestore();
       exitSpy.mockRestore();
-      fs.renameSync(tmp, orig);
     }
   });
 
