@@ -1,10 +1,9 @@
-import type { StreamedEvent } from '@openai/codex-sdk';
+import type { StreamedEvent } from './helpers';
 /* eslint import/order: "off" */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   makeEventStream,
-  neverYieldStream,
   emptyStream,
   withReturnFlag,
   throwingNextStream,
@@ -172,7 +171,7 @@ describe('Stream Handling and Event Processing', () => {
       { type: 'item.completed', item: { type: 'agent_message', text: 'hi' } },
     ];
     const write = vi.fn();
-    const logStream = { write };
+    const logStream = { write } as unknown as ReturnType<typeof import('fs').createWriteStream>;
     const opts: SmallOpts = {
       role: 'impl',
       task: 't',

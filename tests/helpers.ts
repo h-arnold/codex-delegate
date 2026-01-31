@@ -1,4 +1,18 @@
-import type { StreamedEvent } from '@openai/codex-sdk';
+/**
+ * Minimal local `StreamedEvent` type used by tests. Using a local
+ * definition avoids depending on the module's exported types in the test
+ * environment and keeps the tests self-contained.
+ */
+export interface StreamedEvent {
+  type: string;
+  item?: Record<string, unknown>;
+  usage?: { input_tokens: number; output_tokens: number };
+  error?: { message: string };
+  message?: string;
+}
+
+// Minimal StreamedItem type for tests
+export type StreamedItem = Record<string, unknown>;
 
 /**
  * Create an async iterable that yields the provided `events`.
@@ -25,12 +39,33 @@ export function makeEventStream(
  * @returns An `AsyncIterable<StreamedEvent>` whose `next` never resolves
  */
 export function neverYieldStream(): AsyncIterable<StreamedEvent> {
-  return (async function* (): AsyncIterable<StreamedEvent> {
-    // never yield; next() will never resolve
-    await new Promise<never>(() => {});
-
-    return;
-  })();
+  // Implement as an object-based async iterator where `next()` returns a
+  // Promise that never resolves. This avoids using an async generator with
+  // no `yield` (which TypeScript flags as an error).
+  return {
+    /**
+     * Returns an async iterator whose `next()` never resolves.
+     * @returns An `AsyncIterator<StreamedEvent>` whose `next()` never resolves
+     */
+    [Symbol.asyncIterator](): AsyncIterator<StreamedEvent> {
+      return {
+        /**
+         * Never resolve the next promise.
+         * @returns A promise that never resolves
+         */
+        next(): Promise<IteratorResult<StreamedEvent>> {
+          return new Promise<never>(() => {});
+        },
+        /**
+         * Called when the consumer requests return.
+         * @returns A `Promise` resolving to an iterator result with `done: true`
+         */
+        async return(): Promise<IteratorResult<StreamedEvent>> {
+          return { value: undefined, done: true } as const;
+        },
+      };
+    },
+  };
 }
 
 /**
@@ -39,9 +74,30 @@ export function neverYieldStream(): AsyncIterable<StreamedEvent> {
  * @returns An empty `AsyncIterable<StreamedEvent>`
  */
 export function emptyStream(): AsyncIterable<StreamedEvent> {
-  return (async function* (): AsyncIterable<StreamedEvent> {
-    // yield nothing
-  })();
+  return {
+    /**
+     * Returns an async iterator that completes immediately.
+     * @returns An `AsyncIterator<StreamedEvent>` that completes immediately
+     */
+    [Symbol.asyncIterator](): AsyncIterator<StreamedEvent> {
+      return {
+        /**
+         * Resolve immediately with done
+         * @returns A promise resolving to `{ done: true }`
+         */
+        next(): Promise<IteratorResult<StreamedEvent>> {
+          return Promise.resolve({ value: undefined, done: true } as IteratorResult<StreamedEvent>);
+        },
+        /**
+         * Called when the consumer requests return.
+         * @returns A `Promise` resolving to an iterator result with `done: true`
+         */
+        async return(): Promise<IteratorResult<StreamedEvent>> {
+          return { value: undefined, done: true } as const;
+        },
+      };
+    },
+  };
 }
 
 /**
@@ -77,22 +133,25 @@ export function withReturnFlag(
 export function throwingNextStream(flagObj?: { returned?: boolean }): AsyncIterable<StreamedEvent> {
   return {
     /**
-     * @returns void
+     * Returns an async iterator whose next throws synchronously.
+     * @returns An `AsyncIterator<StreamedEvent>` which throws synchronously from `next()`
      */
     [Symbol.asyncIterator](): AsyncIterator<StreamedEvent> {
       return {
         /**
-         * @returns void
+         * Throw synchronously from next()
+         * @returns Never (throws)
          */
         next(): Promise<IteratorResult<StreamedEvent>> {
           throw new Error('sync-next-throw');
         },
         /**
-         * @returns void
+         * Called when the consumer requests return.
+         * @returns A `Promise` resolving to an iterator result with `done: true`
          */
         async return(): Promise<IteratorResult<StreamedEvent>> {
           if (flagObj) flagObj.returned = true;
-          return { done: true } as const;
+          return { value: undefined, done: true } as const;
         },
       };
     },
@@ -111,22 +170,25 @@ export function rejectingNextStream(flagObj?: {
 }): AsyncIterable<StreamedEvent> {
   return {
     /**
-     * @returns void
+     * Returns an async iterator where next() rejects asynchronously.
+     * @returns An `AsyncIterator<StreamedEvent>` whose `next()` rejects
      */
     [Symbol.asyncIterator](): AsyncIterator<StreamedEvent> {
       return {
         /**
-         * @returns void
+         * Reject asynchronously from next()
+         * @returns A promise rejecting with an Error
          */
         next(): Promise<IteratorResult<StreamedEvent>> {
           return Promise.reject(new Error('async-next-throw'));
         },
         /**
-         * @returns void
+         * Called when the consumer requests return.
+         * @returns A `Promise` resolving to an iterator result with `done: true`
          */
         async return(): Promise<IteratorResult<StreamedEvent>> {
           if (flagObj) flagObj.returned = true;
-          return { done: true } as const;
+          return { value: undefined, done: true } as const;
         },
       };
     },
@@ -142,23 +204,24 @@ export function rejectingNextStream(flagObj?: {
 export function nonResolvingNextWithReturn(): AsyncIterable<StreamedEvent> {
   return {
     /**
-     * @returns void
+     * Returns an async iterator whose next never resolves but return resolves.
+     * @returns An `AsyncIterator<StreamedEvent>` where `next()` never resolves
      */
     [Symbol.asyncIterator](): AsyncIterator<StreamedEvent> {
       return {
         /**
-         * @returns void
+         * never resolve next
+         * @returns A promise that never resolves
          */
         next(): Promise<IteratorResult<StreamedEvent>> {
-          // never resolve
           return new Promise<never>(() => {});
         },
         /**
-         * @returns void
+         * Called when the consumer requests return.
+         * @returns A `Promise` resolving to an iterator result with `done: true`
          */
         async return(): Promise<IteratorResult<StreamedEvent>> {
-          // resolve immediately so callers waiting in finally won't hang
-          return { done: true } as const;
+          return { value: undefined, done: true } as const;
         },
       };
     },
