@@ -1,6 +1,8 @@
 import type { StreamResults } from '../stream/stream-results.js';
 import type { DelegateOptions } from '../types/delegate-options.js';
 
+const JSON_INDENT_SPACES = 2;
+
 /**
  * Print short summaries (commands, file changes, tool calls, web queries) unless verbose mode is enabled.
  *
@@ -17,22 +19,30 @@ function printSummaries(results: StreamResults, options: DelegateOptions): void 
     return;
   }
   const limit = options.maxItems ?? Number.POSITIVE_INFINITY;
-  if (results.commands.length > 0) {
-    const limited = results.commands.slice(0, limit);
-    process.stdout.write(`Commands:\n- ${limited.join('\n- ')}\n\n`);
+  writeSummarySection('Commands', results.commands, limit);
+  writeSummarySection('File changes', results.fileChanges, limit);
+  writeSummarySection('Tool calls', results.toolCalls, limit);
+  writeSummarySection('Web searches', results.webQueries, limit);
+}
+
+/**
+ * Write a summary section to stdout when there are items to report.
+ *
+ * @param {string} title - Section title to display in the output.
+ * @param {readonly string[]} items - Items to include in the summary.
+ * @param {number} limit - Maximum number of items to output.
+ * @returns {void}
+ * @remarks
+ * When `items` exceeds the limit, only the first `limit` entries are printed.
+ * @example
+ * writeSummarySection('Commands', ['ls', 'npm test'], 5);
+ */
+function writeSummarySection(title: string, items: readonly string[], limit: number): void {
+  if (items.length === 0) {
+    return;
   }
-  if (results.fileChanges.length > 0) {
-    const limited = results.fileChanges.slice(0, limit);
-    process.stdout.write(`File changes:\n- ${limited.join('\n- ')}\n\n`);
-  }
-  if (results.toolCalls.length > 0) {
-    const limited = results.toolCalls.slice(0, limit);
-    process.stdout.write(`Tool calls:\n- ${limited.join('\n- ')}\n\n`);
-  }
-  if (results.webQueries.length > 0) {
-    const limited = results.webQueries.slice(0, limit);
-    process.stdout.write(`Web searches:\n- ${limited.join('\n- ')}\n\n`);
-  }
+  const limited = items.slice(0, limit);
+  process.stdout.write(`${title}:\n- ${limited.join('\n- ')}\n\n`);
 }
 
 /**
@@ -56,7 +66,7 @@ function printFinalResponse(
   if (outputSchema) {
     try {
       const parsed = JSON.parse(results.finalResponse);
-      process.stdout.write(JSON.stringify(parsed, null, 2) + '\n');
+      process.stdout.write(JSON.stringify(parsed, null, JSON_INDENT_SPACES) + '\n');
       return;
     } catch {
       // fall through to print raw text

@@ -30,6 +30,8 @@ beforeEach(async () => {
 });
 
 describe('Streaming Guards & Handlers', () => {
+  const NON_STRING_VALUE = 123;
+
   describe('GUARD-01: isAgentMessage', () => {
     it('returns true for agent_message with text string', () => {
       const item = { type: 'agent_message', text: 'hello' } as unknown as StreamedItem;
@@ -41,7 +43,10 @@ describe('Streaming Guards & Handlers', () => {
         false,
       );
       expect(
-        helpers.isAgentMessage({ type: 'agent_message', text: 123 } as unknown as StreamedItem),
+        helpers.isAgentMessage({
+          type: 'agent_message',
+          text: NON_STRING_VALUE,
+        } as unknown as StreamedItem),
       ).toBe(false);
     });
 
@@ -90,7 +95,9 @@ describe('Streaming Guards & Handlers', () => {
       expect(helpers.isFileChangeArray(null)).toBe(false);
       expect(helpers.isFileChangeArray([{ kind: 'a' }])).toBe(false);
       expect(helpers.isFileChangeArray([null as unknown])).toBe(false);
-      expect(helpers.isFileChangeArray([{ kind: 'a', path: 123 as unknown }])).toBe(false);
+      expect(helpers.isFileChangeArray([{ kind: 'a', path: NON_STRING_VALUE as unknown }])).toBe(
+        false,
+      );
     });
   });
 

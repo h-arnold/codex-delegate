@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'node_modules', '**/*.cjs'],
+    ignores: ['dist', 'node_modules', '**/*.cjs', '**/*.d.ts'],
   },
   {
     plugins: {
@@ -50,16 +50,30 @@ export default tseslint.config(
     },
   },
   {
-    files: ['test/**/*.ts', 'src/**/*.spec.ts'], // Apply type-aware rules and Vitest rules to test files
+    files: ['tests/**/*.ts', 'tests/**/*.tsx', 'src/**/*.spec.ts'], // Apply type-aware rules and Vitest rules to test files
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json', './vitest.config.ts'],
+        project: ['./tsconfig.tests.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
       ...vitest.configs.recommended.rules, // Apply Vitest recommended rules
+      '@typescript-eslint/no-magic-numbers': 'off',
       // You might want to add more specific rules for test files here
+    },
+  },
+  {
+    files: ['tests/**/*.js', 'tests/**/*.jsx'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.vitest,
+      },
+    },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      '@typescript-eslint/no-magic-numbers': 'off',
     },
   },
   {
@@ -115,6 +129,18 @@ export default tseslint.config(
       'security/detect-eval-with-expression': 'error',
       '@typescript-eslint/no-var-requires': 'error',
       'import/no-commonjs': 'error',
+      complexity: ['warn', { max: 6 }],
+      '@typescript-eslint/no-magic-numbers': [
+        'warn',
+        {
+          ignore: [-1, 0, 1],
+          ignoreArrayIndexes: true,
+          ignoreDefaultValues: true,
+          ignoreEnums: true,
+          enforceConst: true,
+          detectObjects: false,
+        },
+      ],
     },
   },
   {

@@ -55,6 +55,8 @@ const WEB_SEARCH_MODES = ['disabled', 'cached', 'live'] as const;
 type BooleanOptionKey = (typeof BOOLEAN_KEYS)[number];
 type ReasoningLevel = (typeof REASONING_LEVELS)[number];
 
+const OPTION_VALUE_TOKEN_COUNT = 2;
+
 /**
  * Parse a boolean-like string into a boolean value.
  *
@@ -126,7 +128,7 @@ function applyBooleanOption(
     const parsed = parseBoolean(value);
     if (parsed !== undefined) {
       options[key] = parsed;
-      return 2;
+      return OPTION_VALUE_TOKEN_COUNT;
     }
   }
   options[key] = true;
@@ -340,40 +342,83 @@ function parseArgs(argv: string[]): DelegateOptions {
   const assignHandlers = createAssignHandlers(options);
 
   for (let i = 0; i < argv.length; ) {
-    const arg = argv[i];
-
-    // Handle immediate flags like --help, which will exit the process.
-    handleImmediateFlag(arg);
-
-    const key = ARG_ALIASES[arg];
-    if (!key) {
-      i++;
-      continue;
-    }
-
-    const value = argv[i + 1];
-
-    if (isBooleanOption(key)) {
-      i += applyBooleanOption(options, key, value);
-      continue;
-    }
-
-    if (!value || isOption(value)) {
-      i++;
-      continue;
-    }
-
-    const handler = assignHandlers[key as string];
-    if (handler) {
-      handler(value);
-      i += 2;
-      continue;
-    }
-
-    i++;
+    i += parseArgToken(argv, i, options, assignHandlers);
   }
 
   return options;
+}
+
+/**
+ * Parse a single argv token and apply any recognised option handling.
+ *
+ * @param {string[]} argv - The full argv array to parse.
+ * @param {number} index - Current index into the argv array.
+ * @param {DelegateOptions} options - Options object to mutate.
+ * @param {Record<string, (v: string) => void>} assignHandlers - Assign handlers for non-boolean options.
+ * @returns {number} The number of argv tokens consumed by this step.
+ * @remarks
+ * Handles immediate flags, boolean toggles, and value assignment for known options.
+ * @example
+ * parseArgToken(['--task', 'Run'], 0, options, handlers); // => 2
+ */
+function parseArgToken(
+  argv: string[],
+  index: number,
+  options: DelegateOptions,
+  assignHandlers: Record<string, (v: string) => void>,
+): number {
+  const arg = argv[index];
+
+  // Handle immediate flags like --help, which will exit the process.
+  handleImmediateFlag(arg);
+
+  const key = ARG_ALIASES[arg];
+  if (!key) {
+    return 1;
+  }
+
+  const value = argv[index + 1];
+
+  if (isBooleanOption(key)) {
+    return applyBooleanOption(options, key, value);
+  }
+
+  if (!value || isOption(value)) {
+    return 1;
+  }
+
+  const handler = assignHandlers[key as string];
+  if (handler) {
+    handler(value);
+    return OPTION_VALUE_TOKEN_COUNT;
+  }
+
+  return 1;
+}
+
+/**
+ * Validate a single enum-style option against its allowed values.
+ *
+ * @param {string | undefined} value - The option value to validate.
+ * @param {readonly string[]} allowed - Allowed literal values for the option.
+ * @param {string} flag - The CLI flag label used for error reporting.
+ * @returns {void}
+ * @throws {Error} If the value is defined and not within the allowed literals.
+ * @remarks
+ * This helper keeps the main option validation logic concise and consistent.
+ * @example
+ * validateEnumOption('low', REASONING_LEVELS, '--reasoning');
+ */
+function validateEnumOption(
+  value: string | undefined,
+  allowed: readonly string[],
+  flag: string,
+): void {
+  if (value && !allowed.includes(value)) {
+    throw new Error(
+      `Invalid ${flag} value "${value}". Expected one of: ${[...allowed].join(', ')}.`,
+    );
+  }
 }
 
 /**
@@ -388,34 +433,10 @@ function parseArgs(argv: string[]): DelegateOptions {
  * validateOptions({ ...options });
  */
 function validateOptions(options: DelegateOptions): void {
-  if (options.reasoning && !REASONING_LEVELS.includes(options.reasoning as ReasoningLevel)) {
-    throw new Error(
-      `Invalid --reasoning value "${options.reasoning}". Expected one of: ${[
-        ...REASONING_LEVELS,
-      ].join(', ')}.`,
-    );
-  }
-  if (options.sandbox && !SANDBOX_MODES.includes(options.sandbox)) {
-    throw new Error(
-      `Invalid --sandbox value "${options.sandbox}". Expected one of: ${[...SANDBOX_MODES].join(
-        ', ',
-      )}.`,
-    );
-  }
-  if (options.approval && !APPROVAL_POLICIES.includes(options.approval)) {
-    throw new Error(
-      `Invalid --approval value "${options.approval}". Expected one of: ${[
-        ...APPROVAL_POLICIES,
-      ].join(', ')}.`,
-    );
-  }
-  if (options.webSearch && !WEB_SEARCH_MODES.includes(options.webSearch)) {
-    throw new Error(
-      `Invalid --web-search value "${options.webSearch}". Expected one of: ${[
-        ...WEB_SEARCH_MODES,
-      ].join(', ')}.`,
-    );
-  }
+  validateEnumOption(options.reasoning, REASONING_LEVELS, '--reasoning');
+  validateEnumOption(options.sandbox, SANDBOX_MODES, '--sandbox');
+  validateEnumOption(options.approval, APPROVAL_POLICIES, '--approval');
+  validateEnumOption(options.webSearch, WEB_SEARCH_MODES, '--web-search');
 }
 
 export {

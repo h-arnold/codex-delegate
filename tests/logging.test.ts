@@ -7,6 +7,10 @@ import { emptyStream } from './helpers';
 import * as cd from '../src/codex-delegate';
 
 describe('Logging and Output helpers', () => {
+  const MAX_ITEMS = 2;
+  const TAIL_LINE_COUNT = 5;
+  const TOTAL_LOG_LINES = 10;
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -71,7 +75,7 @@ describe('Logging and Output helpers', () => {
       webQueries: ['w1', 'w2', 'w3'],
     } as unknown as Parameters<typeof cd.printSummaries>[0];
 
-    cd.printSummaries(results, { verbose: false, maxItems: 2 } as unknown as Parameters<
+    cd.printSummaries(results, { verbose: false, maxItems: MAX_ITEMS } as unknown as Parameters<
       typeof cd.printSummaries
     >[1]);
 
@@ -115,14 +119,17 @@ describe('Logging and Output helpers', () => {
 
   it('LOG-06: tailLogFile returns last N lines or [] for missing file', () => {
     const tmp = path.join(process.cwd(), 'tests', 'tail-test.log');
-    const lines = Array.from({ length: 10 }, (_, i) => `line-${i + 1}`);
+    const lines = Array.from({ length: TOTAL_LOG_LINES }, (_, i) => `line-${i + 1}`);
     fs.writeFileSync(tmp, lines.join('\n'));
 
-    const tail = cd.tailLogFile(tmp, 5);
+    const tail = cd.tailLogFile(tmp, TAIL_LINE_COUNT);
     expect(tail).toEqual(['line-6', 'line-7', 'line-8', 'line-9', 'line-10']);
 
     // missing file
-    const missing = cd.tailLogFile(path.join(process.cwd(), 'tests', 'nope-234234.log'), 5);
+    const missing = cd.tailLogFile(
+      path.join(process.cwd(), 'tests', 'nope-234234.log'),
+      TAIL_LINE_COUNT,
+    );
     expect(missing).toEqual([]);
 
     // cleanup
@@ -131,14 +138,14 @@ describe('Logging and Output helpers', () => {
 
   it('LOG-07: tailLogFile returns [] when path resolves outside project', () => {
     const outside = path.resolve('/etc/hosts');
-    const tail = cd.tailLogFile(outside, 5);
+    const tail = cd.tailLogFile(outside, TAIL_LINE_COUNT);
     expect(tail).toEqual([]);
   });
 
   it('LOG-08: tailLogFile returns [] for an empty file (exists but no content)', () => {
     const tmp = path.join(process.cwd(), 'tests', 'tail-empty.log');
     fs.writeFileSync(tmp, '');
-    const tail = cd.tailLogFile(tmp, 5);
+    const tail = cd.tailLogFile(tmp, TAIL_LINE_COUNT);
     expect(tail).toEqual([]);
     fs.unlinkSync(tmp);
   });

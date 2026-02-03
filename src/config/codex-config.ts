@@ -16,6 +16,7 @@ type CodexDelegateConfig = Omit<DelegateOptions, 'role' | 'task' | 'instructions
  * File name used for the Codex delegate JSON config file.
  */
 const CONFIG_FILE_NAME = 'codex-delegate-config.json';
+const JSON_INDENT_SPACES = 2;
 
 /**
  * Resolve the `.codex` configuration directory for the current working directory.
@@ -72,6 +73,86 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Copy a string value from the raw object into the config when valid.
+ *
+ * @param {CodexDelegateConfig} config - Config being populated.
+ * @param {Record<string, unknown>} raw - Raw config values.
+ * @param {keyof CodexDelegateConfig} key - Config key to check.
+ * @returns {void}
+ */
+function setStringField(
+  config: CodexDelegateConfig,
+  raw: Record<string, unknown>,
+  key: keyof CodexDelegateConfig,
+): void {
+  const writableConfig = config as Record<keyof CodexDelegateConfig, unknown>;
+  const value = raw[key];
+  if (typeof value === 'string') {
+    writableConfig[key] = value;
+  }
+}
+
+/**
+ * Copy a boolean value from the raw object into the config when valid.
+ *
+ * @param {CodexDelegateConfig} config - Config being populated.
+ * @param {Record<string, unknown>} raw - Raw config values.
+ * @param {keyof CodexDelegateConfig} key - Config key to check.
+ * @returns {void}
+ */
+function setBooleanField(
+  config: CodexDelegateConfig,
+  raw: Record<string, unknown>,
+  key: keyof CodexDelegateConfig,
+): void {
+  const writableConfig = config as Record<keyof CodexDelegateConfig, unknown>;
+  const value = raw[key];
+  if (typeof value === 'boolean') {
+    writableConfig[key] = value;
+  }
+}
+
+/**
+ * Copy a finite number value from the raw object into the config when valid.
+ *
+ * @param {CodexDelegateConfig} config - Config being populated.
+ * @param {Record<string, unknown>} raw - Raw config values.
+ * @param {keyof CodexDelegateConfig} key - Config key to check.
+ * @returns {void}
+ */
+function setFiniteNumberField(
+  config: CodexDelegateConfig,
+  raw: Record<string, unknown>,
+  key: keyof CodexDelegateConfig,
+): void {
+  const writableConfig = config as Record<keyof CodexDelegateConfig, unknown>;
+  const value = raw[key];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    writableConfig[key] = value;
+  }
+}
+
+/**
+ * Copy a positive number value from the raw object into the config when valid.
+ *
+ * @param {CodexDelegateConfig} config - Config being populated.
+ * @param {Record<string, unknown>} raw - Raw config values.
+ * @param {keyof CodexDelegateConfig} key - Config key to check.
+ * @returns {void}
+ */
+function setPositiveNumberField(
+  config: CodexDelegateConfig,
+  raw: Record<string, unknown>,
+  key: keyof CodexDelegateConfig,
+): void {
+  const writableConfig = config as Record<keyof CodexDelegateConfig, unknown>;
+  const value = raw[key];
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    writableConfig[key] = value;
+  }
+}
+
+/**
  * Normalise raw JSON data into a typed Codex config object.
  *
  * @param {Record<string, unknown>} raw - Parsed JSON data.
@@ -83,52 +164,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 function normaliseConfig(raw: Record<string, unknown>): CodexDelegateConfig {
   const config: CodexDelegateConfig = {};
-  if (typeof raw.model === 'string') {
-    config.model = raw.model;
-  }
-  if (typeof raw.reasoning === 'string') {
-    config.reasoning = raw.reasoning;
-  }
-  if (typeof raw.workingDir === 'string') {
-    config.workingDir = raw.workingDir;
-  }
-  if (typeof raw.sandbox === 'string') {
-    config.sandbox = raw.sandbox as DelegateOptions['sandbox'];
-  }
-  if (typeof raw.approval === 'string') {
-    config.approval = raw.approval as DelegateOptions['approval'];
-  }
-  if (typeof raw.network === 'boolean') {
-    config.network = raw.network;
-  }
-  if (typeof raw.webSearch === 'string') {
-    config.webSearch = raw.webSearch as DelegateOptions['webSearch'];
-  }
-  if (typeof raw.verbose === 'boolean') {
-    config.verbose = raw.verbose;
-  }
-  if (typeof raw.structured === 'boolean') {
-    config.structured = raw.structured;
-  }
-  if (typeof raw.schemaFile === 'string') {
-    config.schemaFile = raw.schemaFile;
-  }
-  if (typeof raw.logFile === 'string') {
-    config.logFile = raw.logFile;
-  }
-  if (typeof raw.maxItems === 'number' && Number.isFinite(raw.maxItems)) {
-    config.maxItems = raw.maxItems;
-  }
-  if (typeof raw.overrideWireApi === 'boolean') {
-    config.overrideWireApi = raw.overrideWireApi;
-  }
-  if (
-    typeof raw.timeoutMinutes === 'number' &&
-    Number.isFinite(raw.timeoutMinutes) &&
-    raw.timeoutMinutes > 0
-  ) {
-    config.timeoutMinutes = raw.timeoutMinutes;
-  }
+  setStringField(config, raw, 'model');
+  setStringField(config, raw, 'reasoning');
+  setStringField(config, raw, 'workingDir');
+  setStringField(config, raw, 'sandbox');
+  setStringField(config, raw, 'approval');
+  setBooleanField(config, raw, 'network');
+  setStringField(config, raw, 'webSearch');
+  setBooleanField(config, raw, 'verbose');
+  setBooleanField(config, raw, 'structured');
+  setStringField(config, raw, 'schemaFile');
+  setStringField(config, raw, 'logFile');
+  setFiniteNumberField(config, raw, 'maxItems');
+  setBooleanField(config, raw, 'overrideWireApi');
+  setPositiveNumberField(config, raw, 'timeoutMinutes');
   return config;
 }
 
@@ -182,7 +231,7 @@ function writeCodexConfig(config: CodexDelegateConfig): void {
   fs.mkdirSync(configDir, { recursive: true });
   const configPath = getCodexConfigPath();
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- config path is constructed from the current working directory
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  fs.writeFileSync(configPath, JSON.stringify(config, null, JSON_INDENT_SPACES));
 }
 
 /**

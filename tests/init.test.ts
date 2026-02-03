@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const CONFIG_FILE_NAME = 'codex-delegate-config.json';
+const JSON_INDENT_SPACES = 2;
 
 let originalCwd = '';
 let tempDir = '';
@@ -36,7 +37,7 @@ const getConfigPath = (baseDir: string): string => path.join(baseDir, '.codex', 
 const writeConfigFile = (baseDir: string, data: Record<string, unknown>): void => {
   const configDir = path.join(baseDir, '.codex');
   fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(getConfigPath(baseDir), JSON.stringify(data, null, 2));
+  fs.writeFileSync(getConfigPath(baseDir), JSON.stringify(data, null, JSON_INDENT_SPACES));
 };
 
 /**

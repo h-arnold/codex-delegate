@@ -2,6 +2,8 @@
 
 Use the Codex delegation runner to dispatch focused sub-agent tasks while keeping the main context small. It wraps `@openai/codex-sdk` and streams concise output by default. When logging is enabled (via `--verbose` or `--log-file`), it also prints periodic progress snapshots from the log file.
 
+For implementation details on workflow, components, and configuration values, see [`docs/architecture.md`](docs/architecture.md).
+
 ## Quick Start
 
 ```bash
@@ -39,7 +41,7 @@ Use `--list-roles` to print the discovered role names.
 - `--instructions` (optional, appended to the prompt)
 - `--model`, `--reasoning`, `--working-dir` (model and workspace selection)
 - `--sandbox`, `--approval`, `--network`, `--web-search` (permission controls)
-- `--override-wire-api` (force the Codex CLI to use the responses wire API)
+- `--override-wire-api <true|false>` (force the Codex CLI to use the responses wire API; defaults to `true`)
 - `--structured`, `--schema-file` (structured output)
 - `--verbose`, `--log-file`, `--max-items`, `--timeout-minutes` (output controls)
 
@@ -53,6 +55,10 @@ Use `--list-roles` to print the discovered role names.
 - Use `--max-items` to cap the number of items shown per section.
 - Use `--verbose` to stream all events and write the raw log to `codex-delegate.log` (or `--log-file`). While logging is active, the runner prints progress updates every minute, showing the last five log lines.
 - Use `--structured` for a built-in JSON schema, or `--schema-file` for a custom schema.
+
+## Wire API setting
+
+Codex only supports `wire_api` values of `responses` and `chat` for model providers. If your `config.toml` includes `responses_websocket`, update it to `responses` to avoid startup failures. If you disable `--override-wire-api`, ensure `config.toml` stays on a supported value. When `responses_websocket` is detected, `codex-delegate` will fall back to a local `CODEX_HOME` under `.codex/codex-home` to prevent the CLI from failing to start.
 
 ## Configuration defaults and precedence
 

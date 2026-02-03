@@ -33,6 +33,11 @@ beforeEach(async (): Promise<void> => {
 });
 
 describe('CLI Parsing and Helpers', () => {
+  const MAX_ITEMS_VALUE = 5;
+  const TIMEOUT_MINUTES_VALUE = 2.5;
+  const EXPLICIT_BOOLEAN_TOKEN_COUNT = 2;
+  const LATEST_MAX_ITEMS_VALUE = 3;
+
   /** Spy on process.exit to avoid terminating the test runner */
   let exitSpy: SpyInstance<(...args: unknown[]) => never, unknown[]>;
   /** Spy on console.info to capture help/list output */
@@ -86,13 +91,13 @@ describe('CLI Parsing and Helpers', () => {
   });
 
   it('CLI-05: parse numeric integer (--max-items)', () => {
-    const opts = helpers.parseArgs(['--max-items', '5']);
-    expect(opts.maxItems).toBe(5);
+    const opts = helpers.parseArgs(['--max-items', String(MAX_ITEMS_VALUE)]);
+    expect(opts.maxItems).toBe(MAX_ITEMS_VALUE);
   });
 
   it('CLI-06: parse numeric float (--timeout-minutes)', () => {
-    const opts = helpers.parseArgs(['--timeout-minutes', '2.5']);
-    expect(opts.timeoutMinutes).toBe(2.5);
+    const opts = helpers.parseArgs(['--timeout-minutes', String(TIMEOUT_MINUTES_VALUE)]);
+    expect(opts.timeoutMinutes).toBe(TIMEOUT_MINUTES_VALUE);
   });
 
   it('CLI-07: invalid numeric ignored (NaN)', () => {
@@ -152,12 +157,12 @@ describe('CLI Parsing and Helpers', () => {
   it('CLI-16: applyBooleanOption consumes 2 tokens for explicit booleans', () => {
     const opts = helpers.parseArgs([]);
     const consumed = helpers.applyBooleanOption(opts, 'verbose' as const, 'false');
-    expect(consumed).toBe(2);
+    expect(consumed).toBe(EXPLICIT_BOOLEAN_TOKEN_COUNT);
     expect(opts.verbose).toBe(false);
   });
 
   it('CLI-17: repeated options - last occurrence wins', () => {
     const opts = helpers.parseArgs(['--max-items', '1', '--max-items', '3']);
-    expect(opts.maxItems).toBe(3);
+    expect(opts.maxItems).toBe(LATEST_MAX_ITEMS_VALUE);
   });
 });

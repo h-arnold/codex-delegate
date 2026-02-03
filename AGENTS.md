@@ -18,6 +18,10 @@ Key notes:
 - Default permissions are sandboxed with network and web search enabled; override with explicit flags if needed.
 - While a sub-agent is running, expect a heartbeat update (`agent is still working`) roughly every minute if no new stream events arrive.
 
+### Creating new agents (roles)
+
+Create new roles by adding prompt templates in `.codex/<role>.md`. Keep templates non-empty so they are discovered, and verify with `codex-delegate --list-roles` before running `codex-delegate --role <role> --task "..."`.
+
 ## Coding standards
 
 - Follow the repository code style guide in `docs/code-style.md` (Prettier formatting, ESLint rules, explicit return types, no `any`, and JSDoc requirements).

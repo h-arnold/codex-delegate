@@ -94,6 +94,44 @@ describe('Prompt Templates', () => {
   };
 
   /**
+   * Remove tracked prompt files and clear the tracking set.
+   *
+   * @param {Set<string>} files - Files created during the test run.
+   * @returns {void}
+   * @remarks
+   * Uses best-effort deletion to avoid failing tests due to filesystem issues.
+   * @example
+   * clearTrackedPromptFiles(createdFiles);
+   */
+  const clearTrackedPromptFiles = (files: Set<string>): void => {
+    for (const filePath of files) {
+      try {
+        fs.rmSync(filePath, { force: true });
+      } catch {}
+    }
+    files.clear();
+  };
+
+  /**
+   * Remove a created prompts directory if it is empty.
+   *
+   * @param {string} targetDir - Directory to remove when it is empty.
+   * @param {boolean} wasCreated - Whether the directory was created by the test.
+   * @returns {void}
+   * @remarks
+   * Leaves pre-existing directories intact and ignores deletion errors.
+   * @example
+   * removeCreatedPromptsDirIfEmpty(promptsDir(), createdDir);
+   */
+  const removeCreatedPromptsDirIfEmpty = (targetDir: string, wasCreated: boolean): void => {
+    if (wasCreated && fs.existsSync(targetDir) && fs.readdirSync(targetDir).length === 0) {
+      try {
+        fs.rmdirSync(targetDir);
+      } catch {}
+    }
+  };
+
+  /**
    * Remove tracked prompt files and the `.codex` directory if created and empty.
    *
    * @returns {void}
@@ -103,18 +141,8 @@ describe('Prompt Templates', () => {
    * cleanupPromptsDir();
    */
   const cleanupPromptsDir = (): void => {
-    for (const filePath of createdFiles) {
-      try {
-        fs.rmSync(filePath, { force: true });
-      } catch {}
-    }
-    createdFiles.clear();
-    const targetDir = promptsDir();
-    if (createdDir && fs.existsSync(targetDir) && fs.readdirSync(targetDir).length === 0) {
-      try {
-        fs.rmdirSync(targetDir);
-      } catch {}
-    }
+    clearTrackedPromptFiles(createdFiles);
+    removeCreatedPromptsDirIfEmpty(promptsDir(), createdDir);
     createdDir = false;
   };
 
@@ -180,6 +208,7 @@ describe('Prompt Templates', () => {
   });
 
   it('PROMPT-06: buildPrompt composes template + instructions + task', () => {
+    const MIN_SECTION_COUNT = 2;
     writePromptFile('__test_template.md', 'Template body');
     const out = helpers.buildPrompt({
       role: '__test_template',
@@ -190,7 +219,7 @@ describe('Prompt Templates', () => {
     expect(out).toContain('Instructions:\nDo X');
     expect(out).toContain('Task:\nFinish');
     // sections should be separated by a blank line sequence
-    expect(out.split('\n\n').length).toBeGreaterThanOrEqual(2);
+    expect(out.split('\n\n').length).toBeGreaterThanOrEqual(MIN_SECTION_COUNT);
   });
 
   it("PROMPT-07: '--list-roles' prints 'No roles available.' and exits when prompts missing/empty", () => {
