@@ -5,6 +5,11 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const CONFIG_FILE_NAME = 'codex-delegate-config.json';
+const DEFAULT_TIMEOUT_MINUTES = 10;
+const JSON_INDENT_SPACES = 2;
+const CONFIG_TIMEOUT_MINUTES = 5.5;
+const OVERRIDE_TIMEOUT_MINUTES = 12;
+const CLI_TIMEOUT_MINUTES = 3;
 
 let originalCwd = '';
 let tempDir = '';
@@ -35,7 +40,7 @@ const getConfigPath = (baseDir: string): string => path.join(baseDir, '.codex', 
 const writeConfigFile = (baseDir: string, data: Record<string, unknown>): void => {
   const configDir = path.join(baseDir, '.codex');
   fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(getConfigPath(baseDir), JSON.stringify(data, null, 2));
+  fs.writeFileSync(getConfigPath(baseDir), JSON.stringify(data, null, JSON_INDENT_SPACES));
 };
 
 /**
@@ -93,7 +98,7 @@ describe('Config defaults and precedence', () => {
       webSearch: 'disabled',
       sandbox: 'read-only',
       approval: 'on-request',
-      timeoutMinutes: 5.5,
+      timeoutMinutes: CONFIG_TIMEOUT_MINUTES,
       verbose: true,
       structured: true,
       model: 'gpt-test',
@@ -107,7 +112,7 @@ describe('Config defaults and precedence', () => {
     expect(opts.webSearch).toBe('disabled');
     expect(opts.sandbox).toBe('read-only');
     expect(opts.approval).toBe('on-request');
-    expect(opts.timeoutMinutes).toBe(5.5);
+    expect(opts.timeoutMinutes).toBe(CONFIG_TIMEOUT_MINUTES);
     expect(opts.verbose).toBe(true);
     expect(opts.structured).toBe(true);
     expect(opts.model).toBe('gpt-test');
@@ -125,7 +130,7 @@ describe('Config defaults and precedence', () => {
       webSearch: 'disabled',
       sandbox: 'read-only',
       approval: 'on-request',
-      timeoutMinutes: 12,
+      timeoutMinutes: OVERRIDE_TIMEOUT_MINUTES,
       overrideWireApi: false,
     });
 
@@ -140,7 +145,7 @@ describe('Config defaults and precedence', () => {
       '--approval',
       'never',
       '--timeout-minutes',
-      '3',
+      String(CLI_TIMEOUT_MINUTES),
       '--override-wire-api',
       'true',
     ]);
@@ -149,7 +154,7 @@ describe('Config defaults and precedence', () => {
     expect(opts.webSearch).toBe('live');
     expect(opts.sandbox).toBe('danger-full-access');
     expect(opts.approval).toBe('never');
-    expect(opts.timeoutMinutes).toBe(3);
+    expect(opts.timeoutMinutes).toBe(CLI_TIMEOUT_MINUTES);
     expect(opts.overrideWireApi).toBe(true);
   });
 
@@ -185,7 +190,7 @@ describe('Config defaults and precedence', () => {
     expect(opts.webSearch).toBe('live');
     expect(opts.sandbox).toBe('danger-full-access');
     expect(opts.approval).toBe('never');
-    expect(opts.timeoutMinutes).toBe(10);
+    expect(opts.timeoutMinutes).toBe(DEFAULT_TIMEOUT_MINUTES);
     expect(opts.overrideWireApi).toBe(true);
   });
 });

@@ -9,6 +9,7 @@ import { makeEventStream, emptyStream } from './helpers';
 // Each test will reset module registry and mock the Codex SDK where needed.
 
 describe('Runner (run / main) behavior', () => {
+  const JSON_INDENT_SPACES = 2;
   const originalArgv = process.argv;
   const originalCwd = process.cwd();
   let tempDir = '';
@@ -67,7 +68,7 @@ describe('Runner (run / main) behavior', () => {
   const writeConfigFile = (config: Record<string, unknown>): string => {
     ensureCodexDir();
     const filePath = path.join(codexDir, 'codex-delegate-config.json');
-    fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(config, null, JSON_INDENT_SPACES));
     createdCodexFiles.add(filePath);
     return filePath;
   };
@@ -82,18 +83,51 @@ describe('Runner (run / main) behavior', () => {
    * cleanupCodexDir();
    */
   const cleanupCodexDir = (): void => {
+    removeCreatedCodexFiles();
+    removeCreatedCodexDirIfEmpty();
+    createdCodexDir = false;
+  };
+
+  /**
+   * Remove the `.codex` files created during tests.
+   *
+   * @returns {void}
+   * @remarks
+   * Uses best-effort cleanup to avoid test failures from transient filesystem errors.
+   * @example
+   * removeCreatedCodexFiles();
+   */
+  const removeCreatedCodexFiles = (): void => {
     for (const filePath of createdCodexFiles) {
       try {
         fs.rmSync(filePath, { force: true });
       } catch {}
     }
     createdCodexFiles.clear();
-    if (createdCodexDir && fs.existsSync(codexDir) && fs.readdirSync(codexDir).length === 0) {
-      try {
-        fs.rmdirSync(codexDir);
-      } catch {}
+  };
+
+  /**
+   * Remove the `.codex` directory if the tests created it and it is empty.
+   *
+   * @returns {void}
+   * @remarks
+   * Leaves the directory in place if removal fails or it contains files.
+   * @example
+   * removeCreatedCodexDirIfEmpty();
+   */
+  const removeCreatedCodexDirIfEmpty = (): void => {
+    if (!createdCodexDir) {
+      return;
     }
-    createdCodexDir = false;
+    if (!fs.existsSync(codexDir)) {
+      return;
+    }
+    if (fs.readdirSync(codexDir).length !== 0) {
+      return;
+    }
+    try {
+      fs.rmdirSync(codexDir);
+    } catch {}
   };
 
   beforeEach(() => {

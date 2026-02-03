@@ -125,6 +125,7 @@ describe('Integration / End-to-End Scenarios', () => {
    * @returns {Promise<void>}
    */
   it('E2E-03: Logging progress interval prints tail lines when logStream present', async (): Promise<void> => {
+    const INTERVAL_HANDLE_ID = 123;
     const originalArgv = process.argv;
     const tmp = path.join(process.cwd(), 'tests', 'e2e-log.log');
     const lines = Array.from({ length: 6 }, (_, i) => `line-${i + 1}`);
@@ -156,7 +157,7 @@ describe('Integration / End-to-End Scenarios', () => {
       fn: (...args: unknown[]) => void,
     ) => {
       fn();
-      return 123 as unknown as NodeJS.Timeout;
+      return INTERVAL_HANDLE_ID as unknown as NodeJS.Timeout;
     }) as typeof setInterval);
 
     const write = vi

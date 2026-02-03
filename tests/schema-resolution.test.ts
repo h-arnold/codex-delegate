@@ -33,6 +33,10 @@ beforeEach(async () => {
 });
 
 describe('Schema Resolution', () => {
+  const JSON_INDENT_SPACES = 2;
+  const ARRAY_VALUE_TWO = 2;
+  const ARRAY_VALUE_THREE = 3;
+
   const tmpSchema = path.join(process.cwd(), 'src', '__test_schema.json');
   const tmpBad = path.join(process.cwd(), 'src', '__test_schema_bad.json');
   const tmpMalformed = path.join(process.cwd(), 'src', '__test_schema_malformed.json');
@@ -64,7 +68,7 @@ describe('Schema Resolution', () => {
 
   it('SCHEMA-02: valid --schema-file inside project parsed as object', () => {
     const obj = { hello: 'world' };
-    fs.writeFileSync(tmpSchema, JSON.stringify(obj, null, 2));
+    fs.writeFileSync(tmpSchema, JSON.stringify(obj, null, JSON_INDENT_SPACES));
     const out = helpers.resolveOutputSchema({ ...baseOptions, schemaFile: tmpSchema }, {});
     expect(out).toEqual(obj);
   });
@@ -82,7 +86,7 @@ describe('Schema Resolution', () => {
   });
 
   it('SCHEMA-04: schema file that parses but is not object throws', () => {
-    fs.writeFileSync(tmpBad, JSON.stringify([1, 2, 3]));
+    fs.writeFileSync(tmpBad, JSON.stringify([1, ARRAY_VALUE_TWO, ARRAY_VALUE_THREE]));
     expect(() => helpers.resolveOutputSchema({ ...baseOptions, schemaFile: tmpBad }, {})).toThrow(
       /must contain a JSON object/,
     );

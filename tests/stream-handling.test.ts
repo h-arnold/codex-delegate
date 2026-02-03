@@ -26,6 +26,16 @@ vi.mock('@openai/codex-sdk', (): { Codex: new () => unknown } => ({
 let helpers: typeof import('../src/codex-delegate');
 
 describe('Stream Handling and Event Processing', () => {
+  const DEFAULT_TIMEOUT_MS = 1000;
+  const EXTENDED_TIMEOUT_MS = 200000;
+  const HEARTBEAT_INTERVAL_MS = 60000;
+  const HEARTBEAT_DELAY_MS = 61000;
+  const NEAR_HEARTBEAT_DELAY_MS = 59000;
+  const SHORT_DELAY_MS = 30000;
+  const LONG_DELAY_MS = 100000;
+  const EXTRA_DELAY_MS = 10000;
+  const VERY_SHORT_TIMEOUT_MINUTES = 0.001;
+
   let stdoutWrite: ReturnType<typeof vi.spyOn>;
   const baseOpts: SmallOpts = {
     role: 'impl',
@@ -87,7 +97,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'agent_message', text: 'OK' } },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.finalResponse).toBe('OK');
   });
 
@@ -95,7 +110,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'command_execution', command: 'ls' } },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.commands).toEqual(['ls']);
   });
 
@@ -106,7 +126,12 @@ describe('Stream Handling and Event Processing', () => {
         item: { type: 'file_change', changes: [{ kind: 'modified', path: 'src/a.ts' }] },
       },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.fileChanges).toEqual(['modified: src/a.ts']);
   });
 
@@ -114,7 +139,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'mcp_tool_call', server: 's', tool: 't' } },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.toolCalls).toEqual(['s:t']);
   });
 
@@ -122,7 +152,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'web_search', query: 'query' } },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.webQueries).toEqual(['query']);
   });
 
@@ -130,7 +165,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'command_execution', command: 'echo hi' } },
     ];
-    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Command executed: echo hi'));
   });
 
@@ -147,7 +187,12 @@ describe('Stream Handling and Event Processing', () => {
         },
       },
     ];
-    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(stdoutWrite).toHaveBeenCalledWith(
       expect.stringContaining('File change: update: src/file.ts'),
     );
@@ -160,7 +205,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'mcp_tool_call', server: 'a', tool: 'b' } },
     ];
-    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Tool call: a:b'));
   });
 
@@ -168,7 +218,12 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'item.completed', item: { type: 'web_search', query: 'fast query' } },
     ];
-    await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(stdoutWrite).toHaveBeenCalledWith(expect.stringContaining('Web search: fast query'));
   });
 
@@ -176,28 +231,33 @@ describe('Stream Handling and Event Processing', () => {
     const events: StreamedEvent[] = [
       { type: 'turn.completed', usage: { input_tokens: 3, output_tokens: 4 } },
     ];
-    const res = await helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res.usageSummary).toMatch(/Usage: input 3, output 4/);
   });
 
   it('STREAM-07: turn.failed throws with the event error message', async () => {
     const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'failure' } }];
     await expect(
-      helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000),
+      helpers.processStream(makeEventStream(events), createOpts(), undefined, DEFAULT_TIMEOUT_MS),
     ).rejects.toThrow('failure');
   });
 
   it('STREAM-08: error event throws with message', async () => {
     const events: StreamedEvent[] = [{ type: 'error', message: 'boom' }];
     await expect(
-      helpers.processStream(makeEventStream(events), createOpts(), undefined, 1000),
+      helpers.processStream(makeEventStream(events), createOpts(), undefined, DEFAULT_TIMEOUT_MS),
     ).rejects.toThrow('boom');
   });
 
   it('STREAM-09: stream reading respects timeout and rejects with timeout message', async () => {
     const p = helpers.processStream(
       nonResolvingNextWithReturn(),
-      createOpts({ timeoutMinutes: 0.001 }),
+      createOpts({ timeoutMinutes: VERY_SHORT_TIMEOUT_MINUTES }),
       undefined,
       0,
     );
@@ -216,7 +276,7 @@ describe('Stream Handling and Event Processing', () => {
       makeEventStream(events),
       createOpts({ verbose: true }),
       logStream,
-      1000,
+      DEFAULT_TIMEOUT_MS,
     );
     expect(res.finalResponse).toBe('hi');
     expect(write).toHaveBeenCalled();
@@ -227,26 +287,41 @@ describe('Stream Handling and Event Processing', () => {
     const flag = { called: false };
     const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'oops' } }];
     await expect(
-      helpers.processStream(withReturnFlag(events, flag), createOpts(), undefined, 1000),
+      helpers.processStream(
+        withReturnFlag(events, flag),
+        createOpts(),
+        undefined,
+        DEFAULT_TIMEOUT_MS,
+      ),
     ).rejects.toThrow('oops');
     expect(flag.called).toBe(true);
   });
 
   it('STREAM-12: processStream handles an immediately-ending stream (no events)', async () => {
-    const res = await helpers.processStream(emptyStream(), createOpts(), undefined, 1000);
+    const res = await helpers.processStream(
+      emptyStream(),
+      createOpts(),
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res).toEqual(helpers.toStreamResults());
   });
 
   it('STREAM-13: iterator.next throws -> processStream propagates error and calls iterator.return', async () => {
     const flag: { returned?: boolean } = {};
     await expect(
-      helpers.processStream(throwingNextStream(flag), createOpts(), undefined, 1000),
+      helpers.processStream(throwingNextStream(flag), createOpts(), undefined, DEFAULT_TIMEOUT_MS),
     ).rejects.toThrow('sync-next-throw');
     expect(flag.returned).toBe(true);
 
     const flag2: { returned?: boolean } = {};
     await expect(
-      helpers.processStream(rejectingNextStream(flag2), createOpts(), undefined, 1000),
+      helpers.processStream(
+        rejectingNextStream(flag2),
+        createOpts(),
+        undefined,
+        DEFAULT_TIMEOUT_MS,
+      ),
     ).rejects.toThrow('async-next-throw');
     expect(flag2.returned).toBe(true);
   });
@@ -262,7 +337,12 @@ describe('Stream Handling and Event Processing', () => {
       verbose: false,
       timeoutMinutes: 1,
     };
-    const res = await helpers.processStream(makeEventStream(events), opts, undefined, 1000);
+    const res = await helpers.processStream(
+      makeEventStream(events),
+      opts,
+      undefined,
+      DEFAULT_TIMEOUT_MS,
+    );
     expect(res).toEqual(helpers.toStreamResults());
   });
 
@@ -275,18 +355,18 @@ describe('Stream Handling and Event Processing', () => {
       const events: StreamedEvent[] = [
         { type: 'turn.completed', usage: { input_tokens: 1, output_tokens: 2 } },
       ];
-      const stream = makeEventStream(events, 61000);
-      const promise = helpers.processStream(stream, createOpts(), undefined, 200000);
+      const stream = makeEventStream(events, HEARTBEAT_DELAY_MS);
+      const promise = helpers.processStream(stream, createOpts(), undefined, EXTENDED_TIMEOUT_MS);
 
-      await vi.advanceTimersByTimeAsync(59000);
+      await vi.advanceTimersByTimeAsync(NEAR_HEARTBEAT_DELAY_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(0);
 
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(1);
 
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS);
       await promise;
-      await vi.advanceTimersByTimeAsync(60000);
+      await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(1);
     } finally {
       vi.useRealTimers();
@@ -303,19 +383,19 @@ describe('Stream Handling and Event Processing', () => {
         { type: 'item.completed', item: { type: 'agent_message', text: 'first' } },
         { type: 'item.completed', item: { type: 'agent_message', text: 'second' } },
       ];
-      const stream = makeTimedEventStream(events, [30000, 100000]);
-      const promise = helpers.processStream(stream, createOpts(), undefined, 200000);
+      const stream = makeTimedEventStream(events, [SHORT_DELAY_MS, LONG_DELAY_MS]);
+      const promise = helpers.processStream(stream, createOpts(), undefined, EXTENDED_TIMEOUT_MS);
 
-      await vi.advanceTimersByTimeAsync(30000);
+      await vi.advanceTimersByTimeAsync(SHORT_DELAY_MS);
       await Promise.resolve();
 
-      await vi.advanceTimersByTimeAsync(30000);
+      await vi.advanceTimersByTimeAsync(SHORT_DELAY_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(0);
 
-      await vi.advanceTimersByTimeAsync(60000);
+      await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(1);
 
-      await vi.advanceTimersByTimeAsync(10000);
+      await vi.advanceTimersByTimeAsync(EXTRA_DELAY_MS);
       await promise;
     } finally {
       vi.useRealTimers();
@@ -330,17 +410,17 @@ describe('Stream Handling and Event Processing', () => {
     try {
       const events: StreamedEvent[] = [{ type: 'turn.failed', error: { message: 'boom' } }];
       const promise = helpers.processStream(
-        makeEventStream(events, 1000),
+        makeEventStream(events, DEFAULT_TIMEOUT_MS),
         createOpts(),
         undefined,
-        200000,
+        EXTENDED_TIMEOUT_MS,
       );
-      const rejection = expect(promise).rejects.toThrow('boom');
+      await Promise.all([
+        expect(promise).rejects.toThrow('boom'),
+        vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS),
+      ]);
 
-      await vi.advanceTimersByTimeAsync(1000);
-      await rejection;
-
-      await vi.advanceTimersByTimeAsync(60000);
+      await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS);
       expect(countHeartbeats(stdoutWrite)).toBe(0);
     } finally {
       vi.useRealTimers();
