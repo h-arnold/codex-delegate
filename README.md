@@ -8,7 +8,9 @@ For more detail, see [`docs/codex-delegation.md`](docs/codex-delegation.md).
 
 ## Install from GitHub Packages
 
-1. Configure npm to use the GitHub Packages registry for the scope and authenticate:
+1. Configure npm to use the GitHub Packages registry for the scope and authenticate (ensure your
+   personal access token includes `read:packages`, plus `repo` if the package is in a private
+   repository):
 
    ```bash
    npm config set @h-arnold:registry https://npm.pkg.github.com/

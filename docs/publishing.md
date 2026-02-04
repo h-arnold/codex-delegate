@@ -23,24 +23,8 @@ Publishing locally
 
 Using the package
 
-- Configure npm to install from GitHub Packages for the `@h-arnold` scope:
-
-  ```bash
-  npm config set @h-arnold:registry https://npm.pkg.github.com/
-  npm config set //npm.pkg.github.com/:_authToken=PERSONAL_ACCESS_TOKEN
-  ```
-
-- Install the CLI globally:
-
-  ```bash
-  npm install -g @h-arnold/codex-delegate
-  ```
-
-- Run the CLI to confirm it is available:
-
-  ```bash
-  codex-delegate --help
-  ```
+For installation and usage steps, see the
+[“Install from GitHub Packages” section in the README](../README.md#install-from-github-packages).
 
 CI publishing (recommended)
 

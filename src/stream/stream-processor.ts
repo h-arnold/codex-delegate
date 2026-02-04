@@ -208,7 +208,7 @@ function logStreamEvent(
 /**
  * Handle a streamed item.completed event.
  *
- * @param {StreamedEvent} event - Streamed event to process.
+ * @param {TurnFailedEvent} event - Streamed event to process.
  * @param {StreamResults} results - Accumulator for parsed stream results.
  * @returns {void}
  * @remarks
@@ -228,7 +228,7 @@ function handleItemCompletedEvent(event: StreamedEvent, results: StreamResults):
 /**
  * Handle a streamed turn.completed event.
  *
- * @param {StreamedEvent} event - Streamed event to process.
+ * @param {StreamErrorEvent} event - Streamed event to process.
  * @param {StreamResults} results - Accumulator for parsed stream results.
  * @returns {void}
  * @remarks
@@ -245,7 +245,7 @@ function handleTurnCompletedEvent(event: StreamedEvent, results: StreamResults):
 /**
  * Handle a streamed turn.failed event.
  *
- * @param {StreamedEvent} event - Streamed event to process.
+ * @param {TurnFailedEvent} event - Streamed event to process.
  * @param {StreamResults} results - Accumulator for parsed stream results.
  * @returns {void}
  * @throws {Error} Always throws when the event represents a failure.
@@ -262,7 +262,7 @@ function handleTurnFailedEvent(event: TurnFailedEvent, results: StreamResults): 
 /**
  * Handle a streamed error event.
  *
- * @param {StreamedEvent} event - Streamed event to process.
+ * @param {StreamErrorEvent} event - Streamed event to process.
  * @param {StreamResults} results - Accumulator for parsed stream results.
  * @returns {void}
  * @throws {Error} Always throws when the event represents an error.
