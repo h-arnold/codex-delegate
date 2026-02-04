@@ -21,6 +21,27 @@ Publishing locally
   npm run build
   npm publish --registry=https://npm.pkg.github.com/
 
+Using the package
+
+- Configure npm to install from GitHub Packages for the `@h-arnold` scope:
+
+  ```bash
+  npm config set @h-arnold:registry https://npm.pkg.github.com/
+  npm config set //npm.pkg.github.com/:_authToken=PERSONAL_ACCESS_TOKEN
+  ```
+
+- Install the CLI globally:
+
+  ```bash
+  npm install -g @h-arnold/codex-delegate
+  ```
+
+- Run the CLI to confirm it is available:
+
+  ```bash
+  codex-delegate --help
+  ```
+
 CI publishing (recommended)
 
 - The included workflow (`.github/workflows/publish.yml`) uses `actions/setup-node` and the GitHub-provided `GITHUB_TOKEN` to publish when a release is published.

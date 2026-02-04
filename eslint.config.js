@@ -144,6 +144,18 @@ export default tseslint.config(
     },
   },
   {
+    files: [
+      'tests/**/*.ts',
+      'tests/**/*.tsx',
+      'tests/**/*.js',
+      'tests/**/*.jsx',
+      'src/**/*.spec.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-magic-numbers': 'off',
+    },
+  },
+  {
     files: ['**/*.cjs'],
     rules: {
       'import/no-commonjs': 'off',

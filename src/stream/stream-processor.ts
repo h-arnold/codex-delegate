@@ -14,6 +14,8 @@ import type { DelegateOptions } from '../types/delegate-options.js';
 const DEFAULT_TIMEOUT_MINUTES = 10;
 const HEARTBEAT_INTERVAL_MS = 60_000;
 type TimeoutControl = { timeoutPromise: Promise<never>; timeoutId: NodeJS.Timeout };
+type TurnFailedEvent = Extract<StreamedEvent, { type: 'turn.failed' }>;
+type StreamErrorEvent = Extract<StreamedEvent, { type: 'error' }>;
 
 /**
  * Process a completed streamed item and merge its data into `results`.
@@ -252,7 +254,7 @@ function handleTurnCompletedEvent(event: StreamedEvent, results: StreamResults):
  * @example
  * handleTurnFailedEvent(event, results);
  */
-function handleTurnFailedEvent(event: StreamedEvent, results: StreamResults): void {
+function handleTurnFailedEvent(event: TurnFailedEvent, results: StreamResults): void {
   void results;
   throw new Error(event.error?.message ?? 'Unknown error');
 }
@@ -269,7 +271,7 @@ function handleTurnFailedEvent(event: StreamedEvent, results: StreamResults): vo
  * @example
  * handleStreamErrorEvent(event, results);
  */
-function handleStreamErrorEvent(event: StreamedEvent, results: StreamResults): void {
+function handleStreamErrorEvent(event: StreamErrorEvent, results: StreamResults): void {
   void results;
   throw new Error(event.message ?? 'Unknown error');
 }
