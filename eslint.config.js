@@ -59,7 +59,6 @@ export default tseslint.config(
     },
     rules: {
       ...vitest.configs.recommended.rules, // Apply Vitest recommended rules
-      '@typescript-eslint/no-magic-numbers': 'off',
       // You might want to add more specific rules for test files here
     },
   },
@@ -73,7 +72,6 @@ export default tseslint.config(
     },
     rules: {
       ...vitest.configs.recommended.rules,
-      '@typescript-eslint/no-magic-numbers': 'off',
     },
   },
   {
@@ -141,6 +139,18 @@ export default tseslint.config(
           detectObjects: false,
         },
       ],
+    },
+  },
+  {
+    files: [
+      'tests/**/*.ts',
+      'tests/**/*.tsx',
+      'tests/**/*.js',
+      'tests/**/*.jsx',
+      'src/**/*.spec.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-magic-numbers': 'off',
     },
   },
   {

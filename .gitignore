@@ -4,3 +4,5 @@ dist/
 .vscode/
 coverage/
 *.log
+.codex/codex-delegate-config.json
+.codex/codex-home/

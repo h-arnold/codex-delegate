@@ -6,6 +6,29 @@
 
 For more detail, see [`docs/codex-delegation.md`](docs/codex-delegation.md).
 
+## Install from GitHub Packages
+
+1. Configure npm to use the GitHub Packages registry for the scope and authenticate (ensure your
+   personal access token includes `read:packages`, plus `repo` if the package is in a private
+   repository):
+
+   ```bash
+   npm config set @h-arnold:registry https://npm.pkg.github.com/
+   npm config set //npm.pkg.github.com/:_authToken=PERSONAL_ACCESS_TOKEN
+   ```
+
+2. Install the CLI globally:
+
+   ```bash
+   npm install -g @h-arnold/codex-delegate
+   ```
+
+3. Run the CLI:
+
+   ```bash
+   codex-delegate --help
+   ```
+
 ## Quick start
 
 ```bash

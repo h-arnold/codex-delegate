@@ -21,6 +21,11 @@ Publishing locally
   npm run build
   npm publish --registry=https://npm.pkg.github.com/
 
+Using the package
+
+For installation and usage steps, see the
+[“Install from GitHub Packages” section in the README](../README.md#install-from-github-packages).
+
 CI publishing (recommended)
 
 - The included workflow (`.github/workflows/publish.yml`) uses `actions/setup-node` and the GitHub-provided `GITHUB_TOKEN` to publish when a release is published.
