@@ -12,5 +12,5 @@
 
 ### Notes
 
-- The CLI defaults to `sandbox=danger-full-access`, `approval=never`, `network=true`, and `web-search=live` unless overridden.
+- The CLI defaults to `sandbox=danger-full-access`, `approval=never`, `network=true`, and `webSearch=live` unless overridden.
 - Publishing targets GitHub Packages (`@h-arnold/codex-delegate`).
