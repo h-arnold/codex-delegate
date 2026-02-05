@@ -1,6 +1,6 @@
 {
   "name": "@h-arnold/codex-delegate",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A quick and dirty cli tool that enables easy delegation of tasks to codex sub-agents.",
   "type": "module",
   "main": "dist/codex-delegate.js",

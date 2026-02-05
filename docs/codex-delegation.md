@@ -3,6 +3,7 @@
 Use the Codex delegation runner to dispatch focused sub-agent tasks while keeping the main context small. It wraps `@openai/codex-sdk` and streams concise output by default. When logging is enabled (via `--verbose` or `--log-file`), it also prints periodic progress snapshots from the log file.
 
 For implementation details on workflow, components, and configuration values, see [`docs/architecture.md`](docs/architecture.md).
+For a detailed configuration reference, see [`docs/configuration.md`](docs/configuration.md).
 
 ## Quick Start
 
@@ -34,6 +35,14 @@ Role names are discovered by scanning `.codex` for markdown files and applying t
 
 Use `--list-roles` to print the discovered role names.
 
+## Prerequisites
+
+- Node.js 22+ and npm available in your environment.
+- Access to the Codex CLI via `@openai/codex-sdk`. The Codex CLI, IDE plugin, and web/desktop
+  app inject an OpenAI API key into the environment automatically, so you should not need to
+  configure credentials manually in most setups.
+- A project root with a `.codex` folder for config and role templates.
+
 ## Common Options
 
 - `--role` (implementation, testing, review, documentation)
@@ -55,6 +64,25 @@ Use `--list-roles` to print the discovered role names.
 - Use `--max-items` to cap the number of items shown per section.
 - Use `--verbose` to stream all events and write the raw log to `codex-delegate.log` (or `--log-file`). While logging is active, the runner prints progress updates every minute, showing the last five log lines.
 - Use `--structured` for a built-in JSON schema, or `--schema-file` for a custom schema.
+
+## Troubleshooting
+
+### No roles found
+
+- Ensure your role files live in `.codex/<role>.md` and are not empty.
+- Run `codex-delegate --list-roles` to confirm discovery.
+- Remember `AGENTS.md` is ignored for role discovery.
+
+### Wire API errors
+
+- Codex only supports `responses` or `chat` for `wire_api`. Update `config.toml` if you see
+  `responses_websocket`.
+- Leave `overrideWireApi` enabled unless you have a supported `config.toml`.
+
+### Log file errors
+
+- The log file must be inside the project directory. If you pass an absolute path outside the
+  repo, the CLI will reject it.
 
 ## Wire API setting
 

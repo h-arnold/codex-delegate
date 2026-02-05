@@ -5,8 +5,11 @@
 `codex-delegate` is a CLI that lets Codex agents spawn focused sub-agents for implementation, testing, review, or documentation tasks. It wraps `@openai/codex-sdk`, keeps the main context small, and provides concise summaries by default so you can delegate safely and return to the main thread quickly.
 
 For more detail, see [`docs/codex-delegation.md`](docs/codex-delegation.md).
+Release notes live in [`docs/release-notes.md`](docs/release-notes.md).
 
 ## Install from GitHub Packages
+
+> Recommended: Node.js 22+.
 
 1. Configure npm to use the GitHub Packages registry for the scope and authenticate (ensure your
    personal access token includes `read:packages`, plus `repo` if the package is in a private
@@ -35,19 +38,48 @@ For more detail, see [`docs/codex-delegation.md`](docs/codex-delegation.md).
 codex-delegate --role implementation --task "Add input validation to the assessor controller" --instructions "Use existing DTO patterns; update tests."
 ```
 
+## Initialise and add agent files
+
+1. Initialise the `.codex` folder and default config:
+
+   ```bash
+   codex-delegate init
+   ```
+
+2. Add role templates (agent files) in `.codex/<role>.md`. For example:
+
+   ```bash
+   cat <<'EOF' > .codex/implementation.md
+   You are an implementation-focused agent. Follow the repo style guide and update tests.
+   EOF
+   ```
+
+3. Verify the roles are discovered:
+
+   ```bash
+   codex-delegate --list-roles
+   ```
+
+For a full list of configuration options and recommended settings, see
+[`docs/configuration.md`](docs/configuration.md).
+
 ## Recommended AGENTS.md guidance
 
-If you maintain a project-level `AGENTS.md`, add a short section so contributors know what this tool is, how to run it, and what to expect when it is working:
+If you maintain a project-level `AGENTS.md`, add a short section so contributors know what this tool is, how to run it, and what to expect when it is working. This snippet includes guidance for Codex agents on how to use `codex-delegate` effectively:
 
 ````md
 ## Codex delegation (codex-delegate)
 
-Use `codex-delegate` to spawn a focused sub-agent for a specific task. Keep tasks small and pass constraints in `--instructions`.
+Use `codex-delegate` to spawn a focused sub-agent for a specific task. Keep tasks small, pass constraints in `--instructions`, and set `--timeout-minutes` to 10 or more for long-running jobs.
 
 Example:
 
 ```bash
-codex-delegate --role implementation --task "Add input validation to the assessor controller" --instructions "Use existing DTO patterns; update tests."
+codex-delegate --role implementation \
+  --task "Add input validation to the assessor controller" \
+  --instructions "Use existing DTO patterns; update tests." \
+  --working-dir /path/to/repo \
+  --timeout-minutes 10
 ```
 ````
 

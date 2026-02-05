@@ -24,7 +24,7 @@ Vitest is configured in `vitest.config.ts` with:
 - `globals: true` so `describe`, `it`, and `expect` are available without imports.
 - `include: ['tests/**/*.test.ts']`, which means only TypeScript test files are executed.
 
-If you add JavaScript tests (for example `*.test.js`), update the include pattern to cover them.
+JavaScript test files (for example `*.test.js`) are currently ignored; update the include pattern if you want Vitest to run them.
 
 ## Conventions
 
