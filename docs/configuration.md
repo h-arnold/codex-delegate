@@ -67,7 +67,7 @@ The following settings are the most commonly adjusted for real-world usage.
 {
   "model": "gpt-5.2-codex",
   "reasoning": "high",
-  "workingDir": "/path/to/repo",
+  "workingDir": "packages/my-app",
   "sandbox": "workspace-write",
   "approval": "on-request",
   "network": true,
