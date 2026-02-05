@@ -5,7 +5,7 @@ interact with CLI flags.
 
 ## Where configuration lives
 
-The CLI stores defaults in `.codex/codex-delegate-config.json` at the project root. You can
+The CLI loads configuration from `.codex/codex-delegate-config.json` at the project root. You can
 create it with:
 
 ```bash
