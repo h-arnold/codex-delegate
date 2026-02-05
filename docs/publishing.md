@@ -35,3 +35,11 @@ Notes
 
 - Make sure the repository has releases (manually or via GitHub API) to trigger the publish workflow.
 - If you prefer publishing on `push` to a branch or on `workflow_dispatch`, the workflow can be adjusted.
+
+Release checklist
+
+- Update release notes in `docs/release-notes.md`.
+- Bump the package version (`npm version <version> --no-git-tag-version`).
+- Run checks: `npm run test`, `npm run lint`, and `npm run lint:md`.
+- Build locally (`npm run build`) if you want to validate the dist output.
+- Commit changes and create a release on GitHub to trigger publishing.
