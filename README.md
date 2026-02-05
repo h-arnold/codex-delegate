@@ -78,7 +78,7 @@ Example:
 codex-delegate --role implementation \
   --task "Add input validation to the assessor controller" \
   --instructions "Use existing DTO patterns; update tests." \
-  --working-dir /path/to/repo \
+  --working-dir packages/my-app \
   --timeout-minutes 10
 ```
 ````
