@@ -1,8 +1,11 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  buildAgentContent,
+  cleanupTempWorkspace,
+  createTempWorkspace,
+  writeAgentFile,
+} from './role-test-helpers.js';
 
 let originalCwd = '';
 let tempDir = '';
@@ -12,82 +15,52 @@ let copilotHelpers: {
 };
 
 /**
- * Resolve the temp `.github/agents` directory path.
+ * Return an empty Copilot role list when the module is unavailable.
  *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the agents directory.
+ * @returns {unknown[]} Empty role array.
  * @remarks
- * This helper keeps the test path logic consistent and local to the temp workspace.
+ * This keeps red-phase tests failing on assertions rather than module resolution.
  * @example
- * const dir = agentsDir(tempDir);
+ * const roles = listCopilotFallback();
  */
-const agentsDir = (rootDir: string): string => path.join(rootDir, '.github', 'agents');
+const listCopilotFallback = (): unknown[] => [];
 
 /**
- * Ensure the `.github/agents` directory exists.
+ * Resolve a Copilot role when the module is unavailable.
  *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the agents directory.
+ * @param {string} roleId - Role identifier to resolve.
+ * @returns {unknown | null} Always returns `null` for the fallback.
  * @remarks
- * The directory is created recursively to avoid test order dependencies.
+ * Keeping the fallback explicit avoids false positives when the module is missing.
  * @example
- * ensureAgentsDir(tempDir);
+ * const role = resolveCopilotFallback('missing');
  */
-const ensureAgentsDir = (rootDir: string): string => {
-  const dir = agentsDir(rootDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+const resolveCopilotFallback = (roleId: string): unknown | null => {
+  void roleId;
+  return null;
 };
-
-/**
- * Write an agent markdown file into `.github/agents`.
- *
- * @param {string} rootDir - The temporary workspace root.
- * @param {string} fileName - File name including `.agent.md`.
- * @param {string} contents - File contents to write.
- * @returns {string} Absolute path to the created file.
- * @remarks
- * The file is written synchronously to keep test setup deterministic.
- * @example
- * writeAgentFile(tempDir, 'tester.agent.md', '---\\ndescription: Test\\n---\\nBody');
- */
-const writeAgentFile = (rootDir: string, fileName: string, contents: string): string => {
-  const dir = ensureAgentsDir(rootDir);
-  const filePath = path.join(dir, fileName);
-  fs.writeFileSync(filePath, contents);
-  return filePath;
-};
-
-/**
- * Build a Copilot agent markdown payload with YAML front matter.
- *
- * @param {string[]} frontMatterLines - YAML lines without delimiters.
- * @param {string} body - Prompt body content.
- * @returns {string} Markdown content with front matter and body.
- * @remarks
- * The helper keeps the front matter delimiter format consistent for parsing tests.
- * @example
- * buildAgentContent(['description: Example'], 'Body');
- */
-const buildAgentContent = (frontMatterLines: string[], body: string): string =>
-  ['---', ...frontMatterLines, '---', '', body].join('\n');
 
 beforeEach(async () => {
   originalCwd = process.cwd();
-  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-copilot-'));
+  tempDir = createTempWorkspace('codex-copilot-');
   process.chdir(tempDir);
   vi.resetModules();
-  copilotHelpers = (await import('../src/prompts/copilot-agents')) as unknown as {
-    listCopilotRoles: () => unknown[];
-    resolveCopilotRole: (roleId: string) => unknown | null;
-  };
+  try {
+    copilotHelpers = (await import('../src/prompts/copilot-agents')) as unknown as {
+      listCopilotRoles: () => unknown[];
+      resolveCopilotRole: (roleId: string) => unknown | null;
+    };
+  } catch {
+    copilotHelpers = {
+      listCopilotRoles: listCopilotFallback,
+      resolveCopilotRole: resolveCopilotFallback,
+    };
+  }
 });
 
 afterEach(() => {
   process.chdir(originalCwd);
-  try {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  } catch {}
+  cleanupTempWorkspace(tempDir);
 });
 
 describe('Copilot Agent Discovery', () => {

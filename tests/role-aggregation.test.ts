@@ -1,8 +1,12 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  buildAgentContent,
+  cleanupTempWorkspace,
+  createTempWorkspace,
+  writeAgentFile,
+  writeCodexFile,
+} from './role-test-helpers.js';
 
 let originalCwd = '';
 let tempDir = '';
@@ -12,129 +16,52 @@ let roleSources: {
 };
 
 /**
- * Resolve the temp `.codex` directory path.
+ * Return an empty merged role list when the role source module is unavailable.
  *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the `.codex` directory.
+ * @returns {unknown[]} Empty role array.
  * @remarks
- * This helper centralises the test path so fixtures stay consistent.
+ * This keeps the red-phase tests focused on missing behaviour rather than import errors.
  * @example
- * const dir = codexDir(tempDir);
+ * const roles = listRolesFallback();
  */
-const codexDir = (rootDir: string): string => path.join(rootDir, '.codex');
+const listRolesFallback = (): unknown[] => [];
 
 /**
- * Resolve the temp `.github/agents` directory path.
+ * Resolve a role template when the role source module is unavailable.
  *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the agents directory.
+ * @param {string} roleId - Role identifier to resolve.
+ * @returns {unknown | null} Always returns `null` for the fallback.
  * @remarks
- * This keeps Copilot agent fixtures isolated to the temp workspace.
+ * The fallback makes missing implementations fail assertions instead of imports.
  * @example
- * const dir = agentsDir(tempDir);
+ * const role = resolveTemplateFallback('missing');
  */
-const agentsDir = (rootDir: string): string => path.join(rootDir, '.github', 'agents');
-
-/**
- * Ensure the `.codex` directory exists.
- *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the `.codex` directory.
- * @remarks
- * The directory is created recursively to keep fixtures deterministic.
- * @example
- * ensureCodexDir(tempDir);
- */
-const ensureCodexDir = (rootDir: string): string => {
-  const dir = codexDir(rootDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+const resolveTemplateFallback = (roleId: string): unknown | null => {
+  void roleId;
+  return null;
 };
-
-/**
- * Ensure the `.github/agents` directory exists.
- *
- * @param {string} rootDir - The temporary workspace root.
- * @returns {string} Absolute path to the agents directory.
- * @remarks
- * The directory is created recursively so tests can create files in any order.
- * @example
- * ensureAgentsDir(tempDir);
- */
-const ensureAgentsDir = (rootDir: string): string => {
-  const dir = agentsDir(rootDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-};
-
-/**
- * Write a `.codex` template file.
- *
- * @param {string} rootDir - The temporary workspace root.
- * @param {string} fileName - Markdown file name.
- * @param {string} contents - File contents.
- * @returns {string} Absolute path to the created file.
- * @remarks
- * The file is written synchronously to avoid timing issues in tests.
- * @example
- * writeCodexFile(tempDir, 'alpha.md', 'Alpha body');
- */
-const writeCodexFile = (rootDir: string, fileName: string, contents: string): string => {
-  const dir = ensureCodexDir(rootDir);
-  const filePath = path.join(dir, fileName);
-  fs.writeFileSync(filePath, contents);
-  return filePath;
-};
-
-/**
- * Write a Copilot agent markdown file.
- *
- * @param {string} rootDir - The temporary workspace root.
- * @param {string} fileName - File name including `.agent.md`.
- * @param {string} contents - File contents.
- * @returns {string} Absolute path to the created file.
- * @remarks
- * This helper ensures agents are created in the correct directory for discovery.
- * @example
- * writeAgentFile(tempDir, 'beta.agent.md', '---\\ndescription: Beta\\n---\\nBody');
- */
-const writeAgentFile = (rootDir: string, fileName: string, contents: string): string => {
-  const dir = ensureAgentsDir(rootDir);
-  const filePath = path.join(dir, fileName);
-  fs.writeFileSync(filePath, contents);
-  return filePath;
-};
-
-/**
- * Build a Copilot agent markdown payload with YAML front matter.
- *
- * @param {string[]} frontMatterLines - YAML lines without delimiters.
- * @param {string} body - Prompt body content.
- * @returns {string} Markdown content with front matter and body.
- * @remarks
- * This ensures the front matter format is consistent across fixtures.
- * @example
- * buildAgentContent(['description: Example'], 'Body');
- */
-const buildAgentContent = (frontMatterLines: string[], body: string): string =>
-  ['---', ...frontMatterLines, '---', '', body].join('\n');
 
 beforeEach(async () => {
   originalCwd = process.cwd();
-  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-roles-'));
+  tempDir = createTempWorkspace('codex-roles-');
   process.chdir(tempDir);
   vi.resetModules();
-  roleSources = (await import('../src/prompts/role-sources')) as unknown as {
-    listRoles: () => unknown[];
-    resolveTemplate: (roleId: string) => unknown | null;
-  };
+  try {
+    roleSources = (await import('../src/prompts/role-sources')) as unknown as {
+      listRoles: () => unknown[];
+      resolveTemplate: (roleId: string) => unknown | null;
+    };
+  } catch {
+    roleSources = {
+      listRoles: listRolesFallback,
+      resolveTemplate: resolveTemplateFallback,
+    };
+  }
 });
 
 afterEach(() => {
   process.chdir(originalCwd);
-  try {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  } catch {}
+  cleanupTempWorkspace(tempDir);
 });
 
 describe('Role Aggregation', () => {
