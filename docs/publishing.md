@@ -13,9 +13,9 @@ Key points:
 Publishing locally (npm registry)
 
 - Use a token that can publish scoped packages (enable 2FA bypass for automation or use a granular token configured for publish).
-- Set up npm auth for the public registry:
+- Set up npm auth for the public registry in `~/.npmrc`:
 
-  //registry.npmjs.org/:\_authToken=PERSONAL_ACCESS_TOKEN
+  //registry.npmjs.org/:_authToken=PERSONAL_ACCESS_TOKEN
 
 - Then run:
 
