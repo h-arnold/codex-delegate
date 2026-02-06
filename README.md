@@ -70,6 +70,9 @@ If you maintain a project-level `AGENTS.md`, add a short section so contributors
 ````md
 ## Codex delegation (codex-delegate)
 
+````markdown
+## Spawning sub-agents
+
 Use `codex-delegate` to spawn a focused sub-agent for a specific task. Keep tasks small, pass constraints in `--instructions`, and set `--timeout-minutes` to 10 or more for long-running jobs.
 
 Example:
@@ -84,6 +87,10 @@ codex-delegate --role implementation \
 ````
 
 While a sub-agent is running, expect a heartbeat line (`agent is still working`) roughly every minute if no new stream events arrive.
+
+**IMPORTANT**: Be patient. Some tasks will take several minutes and if the agent is thinking, you may not see any output for a while. If you see the heartbeat line, it is still working. If you stop it early, you may lose the work it has done so far. If you think it has stalled, check the logs for details `logs/codex-delegate.log`.
+
+````
 
 ## Creating new agents (roles)
 
@@ -108,7 +115,7 @@ Run the init command to create the default config file, or let the CLI create it
 
 ```bash
 codex-delegate init
-```
+````
 
 Config defaults (stored when the file is first created) come from the CLI defaults:
 
@@ -143,3 +150,4 @@ Wire API note: `codex-delegate` overrides `wire_api` to `responses` by default. 
 If you install only production dependencies in CI or Docker you may want to skip Husky there. Set `HUSKY=0` or adapt the `prepare` script (see Husky docs).
 
 ---
+````
