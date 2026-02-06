@@ -19,6 +19,7 @@ import { ensureCodexConfig } from './config/codex-config.js';
 import { tailLogFile } from './logging/logging.js';
 import { buildPrompt } from './prompts/prompt-builder.js';
 import { listPromptRoles, resolvePromptTemplate } from './prompts/prompt-templates.js';
+import { listRoles } from './prompts/role-sources.js';
 import { printFinalResponse, printSummaries } from './reporting/reporter.js';
 import { resolveOutputSchema } from './schema/output-schema.js';
 import {
@@ -220,13 +221,11 @@ function ensureTaskProvided(options: DelegateOptions): void {
  * @remarks
  * When no roles are available, a warning is printed and execution continues.
  * @example
- * validateRoleSelection(options.role, listPromptRoles());
+ * validateRoleSelection(options.role, listRoles().map((role) => role.id));
  */
 function validateRoleSelection(role: string, availableRoles: string[]): void {
   if (availableRoles.length === 0) {
-    process.stderr.write(
-      'No roles available in .codex; continuing without role-specific instructions.\n',
-    );
+    process.stderr.write('No roles available; continuing without role-specific instructions.\n');
     return;
   }
 
@@ -430,7 +429,10 @@ async function run(): Promise<void> {
   const outputSchema = resolveOutputSchema(options, getDefaultOutputSchema());
   validateOptions(options);
 
-  validateRoleSelection(options.role, listPromptRoles());
+  validateRoleSelection(
+    options.role,
+    listRoles().map((role) => role.id),
+  );
 
   const logSetup = createLogSetup(options);
 

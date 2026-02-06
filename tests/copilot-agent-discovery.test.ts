@@ -197,6 +197,34 @@ describe('Copilot Agent Discovery', () => {
     }
   });
 
+  it('COPILOT-15: skips files missing closing front matter delimiter with a warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
+      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(roles.length).toBe(0);
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnings).toContain('no-closing.agent.md');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('COPILOT-16: resolve warns on missing closing front matter delimiter', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
+      const resolved = copilotHelpers.resolveCopilotRole('no-closing');
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(resolved).toBeNull();
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnings).toContain('no-closing.agent.md');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('COPILOT-14: returns null for unknown role ids', () => {
     const resolved = copilotHelpers.resolveCopilotRole('unknown') as Record<string, unknown> | null;
     expect(resolved).toBeNull();
