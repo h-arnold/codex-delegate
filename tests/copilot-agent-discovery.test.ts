@@ -4,6 +4,8 @@ import {
   buildAgentContent,
   cleanupTempWorkspace,
   createTempWorkspace,
+  listFallback,
+  resolveFallback,
   writeAgentFile,
 } from './role-test-helpers.js';
 
@@ -12,32 +14,6 @@ let tempDir = '';
 let copilotHelpers: {
   listCopilotRoles: () => unknown[];
   resolveCopilotRole: (roleId: string) => unknown | null;
-};
-
-/**
- * Return an empty Copilot role list when the module is unavailable.
- *
- * @returns {unknown[]} Empty role array.
- * @remarks
- * This keeps red-phase tests failing on assertions rather than module resolution.
- * @example
- * const roles = listCopilotFallback();
- */
-const listCopilotFallback = (): unknown[] => [];
-
-/**
- * Resolve a Copilot role when the module is unavailable.
- *
- * @param {string} roleId - Role identifier to resolve.
- * @returns {unknown | null} Always returns `null` for the fallback.
- * @remarks
- * Keeping the fallback explicit avoids false positives when the module is missing.
- * @example
- * const role = resolveCopilotFallback('missing');
- */
-const resolveCopilotFallback = (roleId: string): unknown | null => {
-  void roleId;
-  return null;
 };
 
 beforeEach(async () => {
@@ -52,8 +28,8 @@ beforeEach(async () => {
     };
   } catch {
     copilotHelpers = {
-      listCopilotRoles: listCopilotFallback,
-      resolveCopilotRole: resolveCopilotFallback,
+      listCopilotRoles: listFallback,
+      resolveCopilotRole: resolveFallback,
     };
   }
 });

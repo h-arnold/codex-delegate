@@ -139,6 +139,32 @@ const cleanupTempWorkspace = (rootDir: string): void => {
   } catch {}
 };
 
+/**
+ * Return an empty array for a missing module fallback.
+ *
+ * @returns {unknown[]} Empty array.
+ * @remarks
+ * This avoids import errors while keeping red-phase assertions meaningful.
+ * @example
+ * const roles = listFallback();
+ */
+const listFallback = (): unknown[] => [];
+
+/**
+ * Return null for a missing module fallback.
+ *
+ * @param {string} id - Identifier that would be resolved.
+ * @returns {unknown | null} Always returns `null` for fallbacks.
+ * @remarks
+ * Use this when the implementation module is not yet present.
+ * @example
+ * const role = resolveFallback('missing');
+ */
+const resolveFallback = (id: string): unknown | null => {
+  void id;
+  return null;
+};
+
 export {
   agentsDir,
   buildAgentContent,
@@ -147,6 +173,8 @@ export {
   createTempWorkspace,
   ensureAgentsDir,
   ensureCodexDir,
+  listFallback,
+  resolveFallback,
   writeAgentFile,
   writeCodexFile,
 };

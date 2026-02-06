@@ -4,6 +4,7 @@ import {
   buildAgentContent,
   cleanupTempWorkspace,
   createTempWorkspace,
+  resolveFallback,
   writeAgentFile,
   writeCodexFile,
 } from './role-test-helpers.js';
@@ -12,21 +13,6 @@ let originalCwd = '';
 let tempDir = '';
 let roleSources: {
   resolveTemplate: (roleId: string) => unknown | null;
-};
-
-/**
- * Resolve a role template when the role source module is unavailable.
- *
- * @param {string} roleId - Role identifier to resolve.
- * @returns {unknown | null} Always returns `null` for the fallback.
- * @remarks
- * The fallback ensures red-phase assertions fail instead of import resolution.
- * @example
- * const role = resolveTemplateFallback('missing');
- */
-const resolveTemplateFallback = (roleId: string): unknown | null => {
-  void roleId;
-  return null;
 };
 
 beforeEach(async () => {
@@ -40,7 +26,7 @@ beforeEach(async () => {
     };
   } catch {
     roleSources = {
-      resolveTemplate: resolveTemplateFallback,
+      resolveTemplate: resolveFallback,
     };
   }
 });

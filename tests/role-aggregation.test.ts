@@ -4,6 +4,8 @@ import {
   buildAgentContent,
   cleanupTempWorkspace,
   createTempWorkspace,
+  listFallback,
+  resolveFallback,
   writeAgentFile,
   writeCodexFile,
 } from './role-test-helpers.js';
@@ -13,32 +15,6 @@ let tempDir = '';
 let roleSources: {
   listRoles: () => unknown[];
   resolveTemplate: (roleId: string) => unknown | null;
-};
-
-/**
- * Return an empty merged role list when the role source module is unavailable.
- *
- * @returns {unknown[]} Empty role array.
- * @remarks
- * This keeps the red-phase tests focused on missing behaviour rather than import errors.
- * @example
- * const roles = listRolesFallback();
- */
-const listRolesFallback = (): unknown[] => [];
-
-/**
- * Resolve a role template when the role source module is unavailable.
- *
- * @param {string} roleId - Role identifier to resolve.
- * @returns {unknown | null} Always returns `null` for the fallback.
- * @remarks
- * The fallback makes missing implementations fail assertions instead of imports.
- * @example
- * const role = resolveTemplateFallback('missing');
- */
-const resolveTemplateFallback = (roleId: string): unknown | null => {
-  void roleId;
-  return null;
 };
 
 beforeEach(async () => {
@@ -53,8 +29,8 @@ beforeEach(async () => {
     };
   } catch {
     roleSources = {
-      listRoles: listRolesFallback,
-      resolveTemplate: resolveTemplateFallback,
+      listRoles: listFallback,
+      resolveTemplate: resolveFallback,
     };
   }
 });
