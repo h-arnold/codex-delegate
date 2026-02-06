@@ -1,5 +1,16 @@
 # Release Notes
 
+## v0.1.1
+
+### Highlights
+
+- Publish releases to the public npm registry with a dedicated GitHub Actions workflow.
+- Document public npm installation and publishing guidance alongside GitHub Packages instructions.
+
+### Notes
+
+- CI publishing now expects an `NPM_TOKEN` repository secret with publish permissions.
+
 ## v0.1.0
 
 ### Highlights
