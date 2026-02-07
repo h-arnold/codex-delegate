@@ -78,6 +78,32 @@ describe('Role Aggregation', () => {
     expect(resolved?.prompt).toBe('Codex wins');
   });
 
+  it('AGG-06: lists Codex as the source when identifiers collide', () => {
+    writeCodexFile(tempDir, 'shared.md', 'Codex wins');
+    writeAgentFile(
+      tempDir,
+      'shared.agent.md',
+      buildAgentContent(['description: Copilot shared'], 'Copilot body'),
+    );
+    const roles = roleSources.listRoles() as Array<Record<string, unknown>>;
+    const sharedRoles = roles.filter((role) => role.id === 'shared');
+    expect(sharedRoles.length).toBe(1);
+    expect(sharedRoles[0]?.source).toBe('codex');
+  });
+
+  it('AGG-07: Codex collision keeps list source as codex', () => {
+    writeCodexFile(tempDir, 'shared.md', 'Codex wins');
+    writeAgentFile(
+      tempDir,
+      'shared.agent.md',
+      buildAgentContent(['description: Copilot shared'], 'Copilot body'),
+    );
+    const roles = roleSources.listRoles() as Array<Record<string, unknown>>;
+    const shared = roles.find((role) => role.id === 'shared');
+    expect(shared?.source).toBe('codex');
+    expect(shared).not.toHaveProperty('description');
+  });
+
   it('AGG-04: preserves source metadata for each role', () => {
     writeCodexFile(tempDir, 'alpha.md', 'Alpha body');
     writeAgentFile(

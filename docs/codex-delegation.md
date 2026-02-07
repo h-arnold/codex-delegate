@@ -35,6 +35,13 @@ Role names are discovered by scanning `.codex` for markdown files and applying t
 
 Use `--list-roles` to print the discovered role names.
 
+## Copilot agent discovery
+
+Copilot agent roles are discovered from `.github/agents/*.agent.md` when present. The role
+identifier uses the `name` front matter field when available and otherwise falls back to the
+filename (without the `.agent.md` suffix). `description` is optional and only used as metadata in
+role listings.
+
 ## Prerequisites
 
 - Node.js 22+ and npm available in your environment.
