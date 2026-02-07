@@ -222,6 +222,24 @@ describe('Prompt Templates', () => {
     expect(out.split('\n\n').length).toBeGreaterThanOrEqual(MIN_SECTION_COUNT);
   });
 
+  it('PROMPT-08: buildPrompt omits missing template and keeps instructions/task', () => {
+    const out = helpers.buildPrompt({
+      role: '__missing_template',
+      instructions: 'Do X',
+      task: 'Finish',
+    });
+    expect(out).toContain('Instructions:\nDo X');
+    expect(out).toContain('Task:\nFinish');
+    expect(out.startsWith('\n')).toBe(false);
+  });
+
+  it('PROMPT-09: buildPrompt returns empty string when template and sections are missing', () => {
+    const out = helpers.buildPrompt({
+      role: '__missing_template',
+    });
+    expect(out).toBe('');
+  });
+
   it("PROMPT-07: '--list-roles' prints 'No roles available.' and exits when prompts missing/empty", () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const exitSpy = vi

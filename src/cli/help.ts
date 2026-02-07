@@ -1,4 +1,4 @@
-import { listPromptRoles } from '../prompts/prompt-templates.js';
+import { listRoles } from '../prompts/role-sources.js';
 
 /**
  * Print the command-line usage information to stdout.
@@ -55,7 +55,7 @@ function printHelp(): void {
  */
 function handleImmediateFlag(arg: string): void {
   if (arg === '--list-roles') {
-    const roles = listPromptRoles();
+    const roles = listRoles().map((role) => role.id);
     if (roles.length === 0) {
       console.info('No roles available.');
     } else {
