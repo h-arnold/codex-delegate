@@ -1,9 +1,13 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildAgentContent,
   cleanupTempWorkspace,
   createTempWorkspace,
+  ensureAgentsDir,
   listFallback,
   resolveFallback,
   writeAgentFile,
@@ -220,6 +224,24 @@ describe('Copilot Agent Discovery', () => {
       expect(resolved).toBeNull();
       expect(warnSpy).toHaveBeenCalled();
       expect(warnings).toContain('no-closing.agent.md');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('COPILOT-17: skips symlinked agent files with a warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const agentsDir = ensureAgentsDir(tempDir);
+      const targetPath = path.join(tempDir, 'outside.md');
+      fs.writeFileSync(targetPath, '---\ndescription: Outside\n---\nBody');
+      const symlinkPath = path.join(agentsDir, 'linked.agent.md');
+      fs.symlinkSync(targetPath, symlinkPath);
+      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(roles.length).toBe(0);
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnings).toContain('symlink');
     } finally {
       warnSpy.mockRestore();
     }

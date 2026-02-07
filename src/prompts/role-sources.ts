@@ -51,12 +51,9 @@ function listRoles(): RoleSummary[] {
  * const template = resolveTemplate('implementation');
  */
 function resolveTemplate(roleId: string): RoleTemplate | null {
-  const codexRoles = listPromptRoles();
-  if (codexRoles.includes(roleId)) {
-    const prompt = resolvePromptTemplate(roleId);
-    if (prompt.length > 0) {
-      return { id: roleId, source: 'codex', prompt };
-    }
+  const prompt = resolvePromptTemplate(roleId);
+  if (prompt.length > 0) {
+    return { id: roleId, source: 'codex', prompt };
   }
 
   const copilotRole = resolveCopilotRole(roleId);

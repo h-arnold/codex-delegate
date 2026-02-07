@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 type CopilotMetadata = {
@@ -122,14 +122,15 @@ function parseAgentFile(
   content: string,
   fileName: string,
 ): { frontMatter: Record<string, string | string[]>; body: string } | null {
-  const splitResult = splitFrontMatter(content, fileName);
-  if (!splitResult) {
+  const located = locateFrontMatter(content, fileName);
+  if (!located) {
     return null;
   }
 
   try {
-    const { frontMatter } = parseFrontMatterLines(splitResult.frontMatterLines);
-    return { frontMatter, body: splitResult.body };
+    const { frontMatter } = parseFrontMatterLines(located.frontMatterLines);
+    const body = located.lines.slice(located.bodyStartIndex).join('\n').trim();
+    return { frontMatter, body };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(
@@ -140,20 +141,20 @@ function parseAgentFile(
 }
 
 /**
- * Split a Copilot agent file into front matter and body sections.
+ * Locate front matter boundaries within a Copilot agent file.
  *
  * @param {string} content - Full file contents.
  * @param {string} fileName - File name for warning messages.
- * @returns {{ frontMatterLines: string[]; body: string } | null} Sections, or null when front matter is missing.
+ * @returns {{ frontMatterLines: string[]; bodyStartIndex: number; lines: string[] } | null} Front matter details, or null when missing.
  * @remarks
  * This helper keeps delimiter handling explicit and centralised for reuse.
  * @example
- * const split = splitFrontMatter('---\\ndescription: Example\\n---\\nBody', 'example.agent.md');
+ * const located = locateFrontMatter('---\\ndescription: Example\\n---\\nBody', 'example.agent.md');
  */
-function splitFrontMatter(
+function locateFrontMatter(
   content: string,
   fileName: string,
-): { frontMatterLines: string[]; body: string } | null {
+): { frontMatterLines: string[]; bodyStartIndex: number; lines: string[] } | null {
   const trimmedContent = content.trim();
   if (trimmedContent.length === 0) {
     return null;
@@ -172,12 +173,9 @@ function splitFrontMatter(
   }
 
   const frontMatterLines = lines.slice(1, endIndex + 1);
-  const body = lines
-    .slice(endIndex + FRONT_MATTER_END_OFFSET)
-    .join('\n')
-    .trim();
+  const bodyStartIndex = endIndex + FRONT_MATTER_END_OFFSET;
 
-  return { frontMatterLines, body };
+  return { frontMatterLines, bodyStartIndex, lines };
 }
 
 /**
@@ -196,6 +194,143 @@ function resolveAgentsPath(): string | null {
     return null;
   }
   return resolvedAgentsPath;
+}
+
+/**
+ * Resolve the real path for the agents directory.
+ *
+ * @param {string} resolvedAgentsPath - Resolved agents directory path.
+ * @returns {string | null} Real path or null when unavailable or outside the repository.
+ * @remarks
+ * This guards against symlink escapes when reading agent files.
+ * @example
+ * const realPath = resolveAgentsRealPath('/repo/.github/agents');
+ */
+function resolveAgentsRealPath(resolvedAgentsPath: string): string | null {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    const realPath = realpathSync(resolvedAgentsPath);
+    if (!realPath.startsWith(process.cwd())) {
+      return null;
+    }
+    return realPath;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Resolve the real path for an agent file and validate it remains inside the agents directory.
+ *
+ * @param {string} resolvedFilePath - Resolved file path.
+ * @param {string} entry - File name for warning messages.
+ * @param {string} realAgentsPath - Real path to the agents directory.
+ * @returns {string | null} Real path when safe, otherwise null.
+ * @remarks
+ * Symlinked entries or paths outside the agents directory are rejected.
+ * @example
+ * const realPath = resolveSafeAgentPath('/repo/.github/agents/agent.md', 'agent.md', '/repo/.github/agents');
+ */
+function resolveSafeAgentPath(
+  resolvedFilePath: string,
+  entry: string,
+  realAgentsPath: string,
+): string | null {
+  const stats = readAgentStats(resolvedFilePath, entry);
+  if (!stats) {
+    return null;
+  }
+
+  if (stats.isSymbolicLink()) {
+    console.warn(`Warning: Copilot agent "${entry}" is a symlink, skipping.`);
+    return null;
+  }
+
+  const realFilePath = resolveAgentRealPath(resolvedFilePath, entry);
+  if (!realFilePath) {
+    return null;
+  }
+
+  if (!isAgentPathWithin(realFilePath, realAgentsPath, entry)) {
+    return null;
+  }
+
+  return realFilePath;
+}
+
+/**
+ * Read filesystem stats for an agent entry.
+ *
+ * @param {string} resolvedFilePath - Resolved file path.
+ * @param {string} entry - File name for warning messages.
+ * @returns {ReturnType<typeof lstatSync> | null} Stats or null on error.
+ * @remarks
+ * This helper converts stat failures into warnings.
+ * @example
+ * const stats = readAgentStats('/repo/.github/agents/agent.md', 'agent.md');
+ */
+function readAgentStats(
+  resolvedFilePath: string,
+  entry: string,
+): ReturnType<typeof lstatSync> | null {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    return lstatSync(resolvedFilePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Warning: Failed to stat Copilot agent "${entry}", skipping. Error: ${message}`);
+    return null;
+  }
+}
+
+/**
+ * Resolve the real path for an agent entry.
+ *
+ * @param {string} resolvedFilePath - Resolved file path.
+ * @param {string} entry - File name for warning messages.
+ * @returns {string | null} Real path or null on error.
+ * @remarks
+ * This helper converts resolution failures into warnings.
+ * @example
+ * const realPath = resolveAgentRealPath('/repo/.github/agents/agent.md', 'agent.md');
+ */
+function resolveAgentRealPath(resolvedFilePath: string, entry: string): string | null {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
+    return realpathSync(resolvedFilePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `Warning: Failed to resolve Copilot agent "${entry}" real path, skipping. Error: ${message}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * Validate that a resolved agent path is within the agents directory.
+ *
+ * @param {string} realFilePath - Real file path.
+ * @param {string} realAgentsPath - Real agents directory path.
+ * @param {string} entry - File name for warning messages.
+ * @returns {boolean} `true` when the path is safe.
+ * @remarks
+ * Paths outside the agents directory are rejected to prevent escapes.
+ * @example
+ * if (!isAgentPathWithin('/repo/.github/agents/agent.md', '/repo/.github/agents', 'agent.md')) return;
+ */
+function isAgentPathWithin(realFilePath: string, realAgentsPath: string, entry: string): boolean {
+  const relativePath = path.relative(realAgentsPath, realFilePath);
+  if (relativePath.length === 0 || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    console.warn(
+      `Warning: Copilot agent "${entry}" resolves outside the agents directory, skipping.`,
+    );
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -228,16 +363,26 @@ function readAgentEntries(resolvedAgentsPath: string): string[] {
  *
  * @param {string} resolvedFilePath - Resolved file path.
  * @param {string} entry - File name for warning messages.
+ * @param {string} realAgentsPath - Real path to the agents directory.
  * @returns {string | null} File contents or null when the read fails.
  * @remarks
  * Errors are converted to warnings to keep discovery resilient.
  * @example
- * const contents = readAgentFile('/repo/.github/agents/example.agent.md', 'example.agent.md');
+ * const contents = readAgentFile('/repo/.github/agents/example.agent.md', 'example.agent.md', '/repo/.github/agents');
  */
-function readAgentFile(resolvedFilePath: string, entry: string): string | null {
+function readAgentFile(
+  resolvedFilePath: string,
+  entry: string,
+  realAgentsPath: string,
+): string | null {
+  const realFilePath = resolveSafeAgentPath(resolvedFilePath, entry, realAgentsPath);
+  if (!realFilePath) {
+    return null;
+  }
+
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
-    return readFileSync(resolvedFilePath, 'utf-8');
+    return readFileSync(realFilePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`Warning: Failed to read Copilot agent "${entry}", skipping. Error: ${message}`);
@@ -284,24 +429,108 @@ function buildRoleTemplate(
 }
 
 /**
+ * Parse front matter for summary-only usage.
+ *
+ * @param {string} content - Full file contents.
+ * @param {string} entry - File name for warning messages.
+ * @returns {Record<string, string | string[]> | null} Parsed front matter or null on failure.
+ * @remarks
+ * This avoids parsing prompt bodies when only role summaries are needed.
+ * @example
+ * const frontMatter = parseFrontMatterOnly('---\\ndescription: Example\\n---\\nBody', 'example.agent.md');
+ */
+function parseFrontMatterOnly(
+  content: string,
+  entry: string,
+): Record<string, string | string[]> | null {
+  const located = locateFrontMatter(content, entry);
+  if (!located) {
+    return null;
+  }
+
+  try {
+    return parseFrontMatterLines(located.frontMatterLines).frontMatter;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `Warning: Copilot agent "${entry}" has invalid YAML front matter, skipping. Error: ${message}`,
+    );
+    return null;
+  }
+}
+
+/**
+ * Build a Copilot role summary from front matter.
+ *
+ * @param {Record<string, string | string[]>} frontMatter - Parsed front matter.
+ * @param {string} entry - File name for fallback role ids.
+ * @returns {CopilotRoleSummary | null} Summary or null when required data is missing.
+ * @remarks
+ * This avoids including prompt bodies in summary results.
+ * @example
+ * const summary = buildRoleSummary({ description: 'Example' }, 'example.agent.md');
+ */
+function buildRoleSummary(
+  frontMatter: Record<string, string | string[]>,
+  entry: string,
+): CopilotRoleSummary | null {
+  const description = resolveDescription(frontMatter);
+  if (description.length === 0) {
+    return null;
+  }
+
+  const roleId = resolveRoleId(frontMatter, entry);
+  if (roleId.length === 0) {
+    return null;
+  }
+
+  return { id: roleId, description, source: 'copilot' };
+}
+
+/**
+ * Track and warn on duplicate Copilot role identifiers.
+ *
+ * @param {Set<string>} seen - Set of role identifiers already encountered.
+ * @param {string} roleId - Role identifier to add.
+ * @param {string} entry - File name for warning messages.
+ * @returns {boolean} `true` when the role id is already seen.
+ * @remarks
+ * Duplicate roles are skipped to keep resolution deterministic.
+ * @example
+ * if (isDuplicateRole(seen, role.id, entry)) return;
+ */
+function isDuplicateRole(seen: Set<string>, roleId: string, entry: string): boolean {
+  if (!seen.has(roleId)) {
+    return false;
+  }
+  console.warn(`Warning: Duplicate Copilot role "${roleId}" found in "${entry}", skipping.`);
+  return true;
+}
+
+/**
  * Parse and build a Copilot role template for a file entry.
  *
  * @param {string} resolvedAgentsPath - Resolved agents directory path.
+ * @param {string} realAgentsPath - Real path to the agents directory.
  * @param {string} entry - File name to read.
  * @returns {CopilotRoleTemplate | null} Role template or null when invalid.
  * @remarks
  * The helper keeps path handling and parsing steps explicit and testable.
  * @example
- * const role = processAgentEntry('/repo/.github/agents', 'example.agent.md');
+ * const role = processAgentEntry('/repo/.github/agents', '/repo/.github/agents', 'example.agent.md');
  */
-function processAgentEntry(resolvedAgentsPath: string, entry: string): CopilotRoleTemplate | null {
+function processAgentEntry(
+  resolvedAgentsPath: string,
+  realAgentsPath: string,
+  entry: string,
+): CopilotRoleTemplate | null {
   const filePath = path.join(resolvedAgentsPath, entry);
   const resolvedFilePath = path.resolve(filePath);
   if (!resolvedFilePath.startsWith(resolvedAgentsPath)) {
     return null;
   }
 
-  const contents = readAgentFile(resolvedFilePath, entry);
+  const contents = readAgentFile(resolvedFilePath, entry, realAgentsPath);
   if (!contents) {
     return null;
   }
@@ -397,18 +626,22 @@ function loadCopilotAgents(): CopilotRoleTemplate[] {
     return [];
   }
 
+  const realAgentsPath = resolveAgentsRealPath(resolvedAgentsPath);
+  if (!realAgentsPath) {
+    return [];
+  }
+
   const sortedEntries = readAgentEntries(resolvedAgentsPath);
   const roles: CopilotRoleTemplate[] = [];
   const seen = new Set<string>();
 
   for (const entry of sortedEntries) {
-    const role = processAgentEntry(resolvedAgentsPath, entry);
+    const role = processAgentEntry(resolvedAgentsPath, realAgentsPath, entry);
     if (!role) {
       continue;
     }
 
-    if (seen.has(role.id)) {
-      console.warn(`Warning: Duplicate Copilot role "${role.id}" found in "${entry}", skipping.`);
+    if (isDuplicateRole(seen, role.id, entry)) {
       continue;
     }
 
@@ -417,6 +650,83 @@ function loadCopilotAgents(): CopilotRoleTemplate[] {
   }
 
   return roles;
+}
+
+/**
+ * Load Copilot role summaries without parsing prompt bodies.
+ *
+ * @returns {CopilotRoleSummary[]} Parsed Copilot role summaries.
+ * @remarks
+ * This is used by role listing to avoid unnecessary prompt parsing.
+ * @example
+ * const roles = loadCopilotRoleSummaries();
+ */
+function loadCopilotRoleSummaries(): CopilotRoleSummary[] {
+  const resolvedAgentsPath = resolveAgentsPath();
+  if (!resolvedAgentsPath) {
+    return [];
+  }
+
+  const realAgentsPath = resolveAgentsRealPath(resolvedAgentsPath);
+  if (!realAgentsPath) {
+    return [];
+  }
+
+  const sortedEntries = readAgentEntries(resolvedAgentsPath);
+  const roles: CopilotRoleSummary[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of sortedEntries) {
+    const summary = buildRoleSummaryFromEntry(resolvedAgentsPath, realAgentsPath, entry);
+    if (!summary) {
+      continue;
+    }
+
+    if (isDuplicateRole(seen, summary.id, entry)) {
+      continue;
+    }
+
+    roles.push(summary);
+    seen.add(summary.id);
+  }
+
+  return roles;
+}
+
+/**
+ * Build a role summary from a single agent file entry.
+ *
+ * @param {string} resolvedAgentsPath - Resolved agents directory path.
+ * @param {string} realAgentsPath - Real agents directory path.
+ * @param {string} entry - File name to read.
+ * @returns {CopilotRoleSummary | null} Summary or null when invalid.
+ * @remarks
+ * This helper keeps summary extraction focused and avoids prompt parsing.
+ * @example
+ * const summary = buildRoleSummaryFromEntry('/repo/.github/agents', '/repo/.github/agents', 'agent.md');
+ */
+function buildRoleSummaryFromEntry(
+  resolvedAgentsPath: string,
+  realAgentsPath: string,
+  entry: string,
+): CopilotRoleSummary | null {
+  const filePath = path.join(resolvedAgentsPath, entry);
+  const resolvedFilePath = path.resolve(filePath);
+  if (!resolvedFilePath.startsWith(resolvedAgentsPath)) {
+    return null;
+  }
+
+  const contents = readAgentFile(resolvedFilePath, entry, realAgentsPath);
+  if (!contents) {
+    return null;
+  }
+
+  const frontMatter = parseFrontMatterOnly(contents, entry);
+  if (!frontMatter) {
+    return null;
+  }
+
+  return buildRoleSummary(frontMatter, entry);
 }
 
 /**
@@ -429,11 +739,7 @@ function loadCopilotAgents(): CopilotRoleTemplate[] {
  * const roles = listCopilotRoles();
  */
 function listCopilotRoles(): CopilotRoleSummary[] {
-  return loadCopilotAgents().map((role) => ({
-    id: role.id,
-    description: role.description,
-    source: role.source,
-  }));
+  return loadCopilotRoleSummaries();
 }
 
 /**
