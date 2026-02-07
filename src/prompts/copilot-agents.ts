@@ -26,6 +26,8 @@ const AGENTS_DIRECTORY = path.join('.github', 'agents');
 const AGENT_SUFFIX = '.agent.md';
 const FRONT_MATTER_DELIMITER = '---';
 const FRONT_MATTER_END_OFFSET = 2;
+const FRONT_MATTER_LINE_PATTERN = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/;
+const QUOTE_TRIM_PATTERN = /(^['"]|['"]$)/g;
 
 /**
  * Check whether a filename is a Copilot agent markdown file.
@@ -70,10 +72,10 @@ function parseYamlValue(rawValue: string): string | string[] {
       .split(',')
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
-      .map((value) => value.replace(/^['"]|['"]$/g, ''));
+      .map((value) => value.replaceAll(QUOTE_TRIM_PATTERN, ''));
   }
 
-  return trimmed.replace(/^['"]|['"]$/g, '');
+  return trimmed.replaceAll(QUOTE_TRIM_PATTERN, '');
 }
 
 /**
@@ -96,7 +98,7 @@ function parseFrontMatterLines(lines: string[]): {
     if (trimmed.length === 0) {
       continue;
     }
-    const match = trimmed.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+    const match = FRONT_MATTER_LINE_PATTERN.exec(trimmed);
     if (!match) {
       throw new Error('Malformed YAML front matter line.');
     }
@@ -595,7 +597,7 @@ function resolveMetadata(frontMatter: Record<string, string | string[]>): Copilo
   const metadata: CopilotMetadata = {};
   const tools = frontMatter.tools;
   if (Array.isArray(tools)) {
-    metadata.tools = tools.map((item) => String(item));
+    metadata.tools = tools.map(String);
   }
   if (typeof frontMatter.model === 'string') {
     metadata.model = frontMatter.model;
@@ -605,7 +607,7 @@ function resolveMetadata(frontMatter: Record<string, string | string[]>): Copilo
   }
   const mcpServers = frontMatter['mcp-servers'];
   if (Array.isArray(mcpServers)) {
-    metadata['mcp-servers'] = mcpServers.map((item) => String(item));
+    metadata['mcp-servers'] = mcpServers.map(String);
   }
 
   return metadata;
