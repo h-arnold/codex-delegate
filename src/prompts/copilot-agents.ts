@@ -10,13 +10,13 @@ type CopilotMetadata = {
 
 type CopilotRoleSummary = {
   id: string;
-  description: string;
+  description?: string;
   source: 'copilot';
 };
 
 type CopilotRoleTemplate = {
   id: string;
-  description: string;
+  description?: string;
   prompt: string;
   source: 'copilot';
   metadata?: CopilotMetadata;
@@ -93,20 +93,268 @@ function parseFrontMatterLines(lines: string[]): {
   frontMatter: Record<string, string | string[]>;
 } {
   const frontMatter: Record<string, string | string[]> = {};
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (let index = 0; index < lines.length; index += 1) {
+    const parsedEntry = parseFrontMatterEntry(lines, index);
+    if (!parsedEntry) {
+      continue;
+    }
+    frontMatter[parsedEntry.key] = parsedEntry.value;
+    index = parsedEntry.nextIndex;
+  }
+  return { frontMatter };
+}
+
+type FrontMatterEntry = {
+  key: string;
+  value: string | string[];
+  nextIndex: number;
+};
+
+/**
+ * Parse a single front matter entry, including multi-line list blocks.
+ *
+ * @param {string[]} lines - Front matter lines.
+ * @param {number} startIndex - Index of the current line.
+ * @returns {FrontMatterEntry | null} Parsed entry or null for empty lines.
+ * @throws {Error} When a line is malformed.
+ * @remarks
+ * List blocks are only parsed when the key has no inline value.
+ */
+function parseFrontMatterEntry(lines: string[], startIndex: number): FrontMatterEntry | null {
+  const keyValue = parseFrontMatterKeyValue(lines[startIndex] ?? '');
+  if (!keyValue) {
+    return null;
+  }
+
+  const blockValue =
+    keyValue.rawValue.trim().length === 0 ? readYamlValueBlock(lines, startIndex + 1) : null;
+  if (blockValue) {
+    return { key: keyValue.key, value: blockValue.value, nextIndex: blockValue.lastIndex };
+  }
+
+  return {
+    key: keyValue.key,
+    value: parseYamlValue(keyValue.rawValue),
+    nextIndex: startIndex,
+  };
+}
+
+type ValueBlockResult = {
+  value: string | string[];
+  lastIndex: number;
+};
+
+/**
+ * Read a YAML block value following a key with no inline value.
+ *
+ * @param {string[]} lines - Front matter lines.
+ * @param {number} startIndex - Index to start scanning from.
+ * @returns {ValueBlockResult | null} Parsed value and last index, or null when none found.
+ * @throws {Error} When the list or flow array is malformed.
+ * @remarks
+ * Stops parsing when a new front matter key is encountered.
+ */
+function readYamlValueBlock(lines: string[], startIndex: number): ValueBlockResult | null {
+  const nextLine = findNextNonEmptyLine(lines, startIndex);
+  if (!nextLine) {
+    return null;
+  }
+  if (isFrontMatterKeyLine(nextLine.trimmed)) {
+    return null;
+  }
+  if (nextLine.trimmed.startsWith('[')) {
+    return readYamlFlowArrayBlock(lines, nextLine.index);
+  }
+  if (nextLine.trimmed.startsWith('-')) {
+    return readYamlListBlock(lines, nextLine.index);
+  }
+  throw new Error('Malformed YAML front matter line.');
+}
+
+/**
+ * Read a YAML list block.
+ *
+ * @param {string[]} lines - Front matter lines.
+ * @param {number} startIndex - Index of the first list item.
+ * @returns {ValueBlockResult} List values and last index.
+ * @throws {Error} When the list items are malformed.
+ * @remarks
+ * Stops parsing when a new front matter key is encountered.
+ */
+function readYamlListBlock(lines: string[], startIndex: number): ValueBlockResult {
+  const listValues: string[] = [];
+  let index = startIndex;
+
+  for (; index < lines.length; index += 1) {
+    const nextTrimmed = (lines[index] ?? '').trim();
+    if (nextTrimmed.length === 0) {
+      continue;
+    }
+    if (isFrontMatterKeyLine(nextTrimmed)) {
+      break;
+    }
+    listValues.push(parseYamlListItem(nextTrimmed));
+  }
+
+  if (listValues.length === 0) {
+    throw new Error('Malformed YAML front matter line.');
+  }
+
+  return { value: listValues, lastIndex: index - 1 };
+}
+
+/**
+ * Read a multi-line YAML flow array block.
+ *
+ * @param {string[]} lines - Front matter lines.
+ * @param {number} startIndex - Index of the opening bracket line.
+ * @returns {ValueBlockResult} Array values and last index.
+ * @throws {Error} When the array is malformed or incomplete.
+ */
+function readYamlFlowArrayBlock(lines: string[], startIndex: number): ValueBlockResult {
+  let index = startIndex;
+  let buffer = '';
+
+  for (; index < lines.length; index += 1) {
+    const trimmed = (lines[index] ?? '').trim();
     if (trimmed.length === 0) {
       continue;
     }
-    const match = FRONT_MATTER_LINE_PATTERN.exec(trimmed);
-    if (!match) {
-      throw new Error('Malformed YAML front matter line.');
+    buffer = appendFlowArrayBuffer(buffer, trimmed);
+    const closing = findFlowArrayClosing(buffer);
+    if (closing) {
+      assertNoTrailingCharacters(closing.trailing);
+      return { value: parseYamlArrayValue(closing.arrayText), lastIndex: index };
     }
-    const key = match[1] ?? '';
-    const rawValue = match[2] ?? '';
-    frontMatter[key] = parseYamlValue(rawValue);
   }
-  return { frontMatter };
+
+  throw new Error('Malformed YAML array value.');
+}
+
+/**
+ * Parse a front matter line into a key and raw value.
+ *
+ * @param {string} line - Front matter line.
+ * @returns {{ key: string; rawValue: string } | null} Parsed key/value or null for empty lines.
+ * @throws {Error} When the line is malformed.
+ */
+function parseFrontMatterKeyValue(line: string): { key: string; rawValue: string } | null {
+  const trimmed = line.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const match = FRONT_MATTER_LINE_PATTERN.exec(trimmed);
+  if (!match) {
+    throw new Error('Malformed YAML front matter line.');
+  }
+
+  return { key: match[1] ?? '', rawValue: match[2] ?? '' };
+}
+
+/**
+ * Check whether a front matter line declares a new key.
+ *
+ * @param {string} line - Trimmed line to inspect.
+ * @returns {boolean} `true` when the line looks like a `key: value` entry.
+ */
+function isFrontMatterKeyLine(line: string): boolean {
+  return FRONT_MATTER_LINE_PATTERN.test(line);
+}
+
+/**
+ * Parse a YAML list item line.
+ *
+ * @param {string} line - Trimmed list line.
+ * @returns {string} Parsed list item.
+ * @throws {Error} When the line is malformed or not a scalar.
+ */
+function parseYamlListItem(line: string): string {
+  const listMatch = /^-\s*(.*)$/.exec(line);
+  if (!listMatch) {
+    throw new Error('Malformed YAML front matter line.');
+  }
+  const itemValue = parseYamlValue(listMatch[1] ?? '');
+  if (Array.isArray(itemValue)) {
+    throw new Error('Malformed YAML array value.');
+  }
+  return itemValue;
+}
+
+/**
+ * Find the next non-empty line.
+ *
+ * @param {string[]} lines - Front matter lines.
+ * @param {number} startIndex - Index to start scanning from.
+ * @returns {{ index: number; trimmed: string } | null} Line details or null when none found.
+ */
+function findNextNonEmptyLine(
+  lines: string[],
+  startIndex: number,
+): { index: number; trimmed: string } | null {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const trimmed = (lines[index] ?? '').trim();
+    if (trimmed.length > 0) {
+      return { index, trimmed };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Append a trimmed flow array line into the working buffer.
+ *
+ * @param {string} buffer - Current buffer.
+ * @param {string} line - Trimmed line to append.
+ * @returns {string} Updated buffer.
+ */
+function appendFlowArrayBuffer(buffer: string, line: string): string {
+  return buffer.length === 0 ? line : `${buffer} ${line}`;
+}
+
+/**
+ * Find the closing bracket for a flow array buffer.
+ *
+ * @param {string} buffer - Flow array buffer.
+ * @returns {{ arrayText: string; trailing: string } | null} Array text and trailing content.
+ */
+function findFlowArrayClosing(buffer: string): { arrayText: string; trailing: string } | null {
+  const closingIndex = buffer.indexOf(']');
+  if (closingIndex === -1) {
+    return null;
+  }
+  return {
+    arrayText: buffer.slice(0, closingIndex + 1),
+    trailing: buffer.slice(closingIndex + 1),
+  };
+}
+
+/**
+ * Assert that there is no trailing content after a flow array closing bracket.
+ *
+ * @param {string} trailing - Trailing content to validate.
+ * @throws {Error} When trailing content is present.
+ */
+function assertNoTrailingCharacters(trailing: string): void {
+  if (trailing.trim().length > 0) {
+    throw new Error('Malformed YAML array value.');
+  }
+}
+
+/**
+ * Parse a YAML flow array value.
+ *
+ * @param {string} rawValue - Array value string.
+ * @returns {string[]} Parsed array values.
+ * @throws {Error} When the value is not an array.
+ */
+function parseYamlArrayValue(rawValue: string): string[] {
+  const parsedValue = parseYamlValue(rawValue);
+  if (!Array.isArray(parsedValue)) {
+    throw new Error('Malformed YAML array value.');
+  }
+  return parsedValue;
 }
 
 /**
@@ -409,24 +657,20 @@ function buildRoleTemplate(
   body: string,
   entry: string,
 ): CopilotRoleTemplate | null {
-  const description = resolveDescription(frontMatter);
-  if (description.length === 0) {
-    return null;
-  }
-
   const roleId = resolveRoleId(frontMatter, entry);
   if (roleId.length === 0) {
     return null;
   }
 
+  const description = resolveDescription(frontMatter);
   const metadata = resolveMetadata(frontMatter);
 
   return {
     id: roleId,
-    description,
     prompt: body,
     source: 'copilot',
-    metadata,
+    ...(description ? { description } : {}),
+    ...(metadata ? { metadata } : {}),
   };
 }
 
@@ -476,17 +720,18 @@ function buildRoleSummary(
   frontMatter: Record<string, string | string[]>,
   entry: string,
 ): CopilotRoleSummary | null {
-  const description = resolveDescription(frontMatter);
-  if (description.length === 0) {
-    return null;
-  }
-
   const roleId = resolveRoleId(frontMatter, entry);
   if (roleId.length === 0) {
     return null;
   }
 
-  return { id: roleId, description, source: 'copilot' };
+  const description = resolveDescription(frontMatter);
+
+  return {
+    id: roleId,
+    source: 'copilot',
+    ...(description ? { description } : {}),
+  };
 }
 
 /**
@@ -569,31 +814,33 @@ function resolveRoleId(frontMatter: Record<string, string | string[]>, fileName:
  * Extract the description from Copilot agent front matter.
  *
  * @param {Record<string, string | string[]>} frontMatter - Parsed front matter.
- * @returns {string} Description string, trimmed.
+ * @returns {string | undefined} Description string when present, trimmed.
  * @remarks
- * The description is required for valid Copilot agents.
+ * The description is optional and does not fall back to other fields.
  * @example
  * const description = resolveDescription({ description: 'Example' });
  */
-function resolveDescription(frontMatter: Record<string, string | string[]>): string {
+function resolveDescription(frontMatter: Record<string, string | string[]>): string | undefined {
   const description = frontMatter.description;
-  if (typeof description !== 'string') {
-    return '';
+  if (typeof description === 'string' && description.trim().length > 0) {
+    return description.trim();
   }
-  return description.trim();
+  return undefined;
 }
 
 /**
  * Extract optional Copilot metadata fields from front matter.
  *
  * @param {Record<string, string | string[]>} frontMatter - Parsed front matter.
- * @returns {CopilotMetadata} Metadata object, possibly empty.
+ * @returns {CopilotMetadata | undefined} Metadata object when present.
  * @remarks
  * Unknown fields are ignored to avoid leaking extra data.
  * @example
  * const metadata = resolveMetadata({ tools: ['read'] });
  */
-function resolveMetadata(frontMatter: Record<string, string | string[]>): CopilotMetadata {
+function resolveMetadata(
+  frontMatter: Record<string, string | string[]>,
+): CopilotMetadata | undefined {
   const metadata: CopilotMetadata = {};
   const tools = frontMatter.tools;
   if (Array.isArray(tools)) {
@@ -610,7 +857,7 @@ function resolveMetadata(frontMatter: Record<string, string | string[]>): Copilo
     metadata['mcp-servers'] = mcpServers.map(String);
   }
 
-  return metadata;
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
 /**
@@ -736,7 +983,7 @@ function buildRoleSummaryFromEntry(
  *
  * @returns {CopilotRoleSummary[]} Array of role summaries.
  * @remarks
- * Only roles with valid front matter and a non-empty description are returned.
+ * Roles are returned whenever valid front matter is present with an identifier.
  * @example
  * const roles = listCopilotRoles();
  */

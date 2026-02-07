@@ -207,6 +207,12 @@ function logStreamEvent(
   }
 }
 
+/**
+ * Determine whether a streamed event contains a completed item payload.
+ *
+ * @param {StreamedEvent} event - Streamed event to inspect.
+ * @returns {boolean} `true` when the event is an item.completed with an item payload.
+ */
 function isCompletedStreamItem(
   event: StreamedEvent,
 ): event is StreamedEvent & { type: 'item.completed'; item: StreamedItem } {

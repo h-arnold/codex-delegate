@@ -80,7 +80,7 @@ describe('Copilot Agent Discovery', () => {
     expect(roles[0]?.description).toBe('Focuses on quality');
   });
 
-  it('COPILOT-05: skips files missing or blank description', () => {
+  it('COPILOT-05: treats description as optional when name is present', () => {
     writeAgentFile(
       tempDir,
       'no-description.agent.md',
@@ -92,7 +92,19 @@ describe('Copilot Agent Discovery', () => {
       buildAgentContent(['description: "   "'], 'Body'),
     );
     const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-    expect(roles.length).toBe(0);
+    expect(roles.length).toBe(2);
+    const namedRole = roles.find((role) => role.id === 'missing-description');
+    expect(namedRole).not.toHaveProperty('description');
+    const blankRole = roles.find((role) => role.id === 'blank-description');
+    expect(blankRole).not.toHaveProperty('description');
+  });
+
+  it('COPILOT-19: falls back to the filename when name and description are missing', () => {
+    writeAgentFile(tempDir, 'no-name-description.agent.md', buildAgentContent([], 'Body'));
+    const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+    expect(roles.length).toBe(1);
+    expect(roles[0]?.id).toBe('no-name-description');
+    expect(roles[0]).not.toHaveProperty('description');
   });
 
   it('COPILOT-06: uses name as role id when present', () => {
@@ -129,6 +141,17 @@ describe('Copilot Agent Discovery', () => {
     expect(prompt).not.toContain('---');
   });
 
+  it('COPILOT-24: parses front matter with CRLF line endings', () => {
+    writeAgentFile(
+      tempDir,
+      'crlf.agent.md',
+      ['---', 'description: CRLF test', '---', '', 'Body with CRLF.'].join('\r\n'),
+    );
+    const resolved = copilotHelpers.resolveCopilotRole('crlf') as Record<string, unknown> | null;
+    expect(resolved?.description).toBe('CRLF test');
+    expect(resolved?.prompt).toContain('Body with CRLF.');
+  });
+
   it('COPILOT-09: skips malformed YAML with a warning (no throw)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
@@ -143,6 +166,55 @@ describe('Copilot Agent Discovery', () => {
     }
   });
 
+  it('COPILOT-21: skips malformed flow arrays with trailing characters', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      writeAgentFile(
+        tempDir,
+        'bad-flow-trailing.agent.md',
+        buildAgentContent(
+          [
+            'name: bad-flow-trailing',
+            'tools:',
+            '  [',
+            "    'read',",
+            "    'search'",
+            '  ] trailing',
+          ],
+          'Body',
+        ),
+      );
+      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(roles.length).toBe(0);
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnings).toContain('bad-flow-trailing.agent.md');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('COPILOT-22: skips unterminated flow arrays with a warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      writeAgentFile(
+        tempDir,
+        'bad-flow-unterminated.agent.md',
+        buildAgentContent(
+          ['name: bad-flow-unterminated', 'tools:', '  [', "    'read',", "    'search'"],
+          'Body',
+        ),
+      );
+      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(roles.length).toBe(0);
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnings).toContain('bad-flow-unterminated.agent.md');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('COPILOT-10: ignores unknown front matter properties without failing', () => {
     writeAgentFile(
       tempDir,
@@ -151,7 +223,22 @@ describe('Copilot Agent Discovery', () => {
     );
     const resolved = copilotHelpers.resolveCopilotRole('unknown') as Record<string, unknown> | null;
     expect(resolved).not.toBeNull();
-    expect(resolved?.metadata).not.toHaveProperty('fancy');
+    expect(resolved).not.toHaveProperty('metadata');
+  });
+
+  it('COPILOT-23: trims quoted name and description values', () => {
+    writeAgentFile(
+      tempDir,
+      'quoted.agent.md',
+      buildAgentContent(
+        ['name: "  quoted-name  "', "description: '  Quoted description  '"],
+        'Body',
+      ),
+    );
+    const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+    expect(roles.length).toBe(1);
+    expect(roles[0]?.id).toBe('quoted-name');
+    expect(roles[0]?.description).toBe('Quoted description');
   });
 
   it('COPILOT-11: preserves optional metadata when present', () => {
@@ -180,6 +267,50 @@ describe('Copilot Agent Discovery', () => {
       target: 'github-copilot',
       'mcp-servers': ['atlas'],
     });
+  });
+
+  it('COPILOT-18: supports multi-line tools arrays in front matter', () => {
+    writeAgentFile(
+      tempDir,
+      'multi-tools.agent.md',
+      buildAgentContent(
+        [
+          'name: multi-tools',
+          'description: Multi tools format',
+          'tools:',
+          '  [',
+          "    'read',",
+          "    'search',",
+          '  ]',
+          'model: gpt-5.2-codex',
+        ],
+        'Body',
+      ),
+    );
+    const resolved = copilotHelpers.resolveCopilotRole('multi-tools') as Record<
+      string,
+      unknown
+    > | null;
+    expect(resolved?.metadata).toEqual({
+      tools: ['read', 'search'],
+      model: 'gpt-5.2-codex',
+    });
+  });
+
+  it('COPILOT-20: supports YAML list blocks for tools metadata', () => {
+    writeAgentFile(
+      tempDir,
+      'list-tools.agent.md',
+      buildAgentContent(
+        ['name: list-tools', 'description: Tools list block', 'tools:', "  - 'read'", '  - search'],
+        'Body',
+      ),
+    );
+    const resolved = copilotHelpers.resolveCopilotRole('list-tools') as Record<
+      string,
+      unknown
+    > | null;
+    expect(resolved?.metadata).toEqual({ tools: ['read', 'search'] });
   });
 
   it('COPILOT-12: missing .github/agents directory returns an empty role list', () => {
