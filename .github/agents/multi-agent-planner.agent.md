@@ -1,14 +1,32 @@
-# multi-agent-planner agent instructions
-
 ---
+name: Multi-Agent Planner Agent Instructions
+tools:
+  [
+    'vscode/getProjectSetupInfo',
+    'vscode/openSimpleBrowser',
+    'vscode/runCommand',
+    'vscode/askQuestions',
+    'vscode/vscodeAPI',
+    'execute/getTerminalOutput',
+    'execute/awaitTerminal',
+    'execute/createAndRunTask',
+    'execute/runInTerminal',
+    'read/readFile',
+    'agent',
+    'edit/createDirectory',
+    'edit/createFile',
+    'edit/editFiles',
+    'search',
+    'web',
+    'vscode.mermaid-chat-features/renderMermaidDiagram',
+    'sonarsource.sonarlint-vscode/sonarqube_getPotentialSecurityIssues',
+    'sonarsource.sonarlint-vscode/sonarqube_excludeFiles',
+    'sonarsource.sonarlint-vscode/sonarqube_setUpConnectedMode',
+    'sonarsource.sonarlint-vscode/sonarqube_analyzeFile',
+  ]
 
-title: Multi-Agent Planner Agent Instructions
-role: planner
-description: >-
-Produce exhaustive TDD-aligned action plans that describe every test, code
-change, constraint and implementation step so downstream agents can execute
-without additional clarification.
-
+user-invokable: true
+disable-model-invocation: false
 ---
 
 ## Mission
