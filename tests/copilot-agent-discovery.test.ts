@@ -43,6 +43,24 @@ afterEach(() => {
   cleanupTempWorkspace(tempDir);
 });
 
+/**
+ * Helper to run tests that expect console warnings.
+ *
+ * @param {() => void} testFn - Test function to execute.
+ * @returns {string} Captured warning messages.
+ * @remarks
+ * Reduces duplication by centralizing spy setup and teardown.
+ */
+function expectWarnings(testFn: () => void): string {
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    testFn();
+    return warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
+  } finally {
+    warnSpy.mockRestore();
+  }
+}
+
 describe('Copilot Agent Discovery', () => {
   it('COPILOT-01: discovers valid .github/agents/*.agent.md files', () => {
     writeAgentFile(
@@ -153,22 +171,16 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-09: skips malformed YAML with a warning (no throw)', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(tempDir, 'bad.agent.md', '---\nname: [\n---\nBody');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('bad.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('bad.agent.md');
   });
 
   it('COPILOT-21: skips malformed flow arrays with trailing characters', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(
         tempDir,
         'bad-flow-trailing.agent.md',
@@ -185,18 +197,13 @@ describe('Copilot Agent Discovery', () => {
         ),
       );
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('bad-flow-trailing.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('bad-flow-trailing.agent.md');
   });
 
   it('COPILOT-22: skips unterminated flow arrays with a warning', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(
         tempDir,
         'bad-flow-unterminated.agent.md',
@@ -206,13 +213,9 @@ describe('Copilot Agent Discovery', () => {
         ),
       );
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('bad-flow-unterminated.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('bad-flow-unterminated.agent.md');
   });
 
   it('COPILOT-10: ignores unknown front matter properties without failing', () => {
@@ -319,63 +322,43 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-13: skips files without YAML front matter with a warning', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(tempDir, 'no-front-matter.agent.md', 'You are a test agent.');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('no-front-matter.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('no-front-matter.agent.md');
   });
 
   it('COPILOT-15: skips files missing closing front matter delimiter with a warning', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('no-closing.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('no-closing.agent.md');
   });
 
   it('COPILOT-16: resolve warns on missing closing front matter delimiter', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
       const resolved = copilotHelpers.resolveCopilotRole('no-closing');
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(resolved).toBeNull();
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('no-closing.agent.md');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('no-closing.agent.md');
   });
 
   it('COPILOT-17: skips symlinked agent files with a warning', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    try {
+    const warnings = expectWarnings(() => {
       const agentsDir = ensureAgentsDir(tempDir);
       const targetPath = path.join(tempDir, 'outside.md');
       fs.writeFileSync(targetPath, '---\ndescription: Outside\n---\nBody');
       const symlinkPath = path.join(agentsDir, 'linked.agent.md');
       fs.symlinkSync(targetPath, symlinkPath);
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      const warnings = warnSpy.mock.calls.map((call) => String(call[0])).join('\n');
       expect(roles.length).toBe(0);
-      expect(warnSpy).toHaveBeenCalled();
-      expect(warnings).toContain('symlink');
-    } finally {
-      warnSpy.mockRestore();
-    }
+    });
+    expect(warnings).toContain('symlink');
   });
 
   it('COPILOT-14: returns null for unknown role ids', () => {
