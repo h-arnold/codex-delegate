@@ -65,7 +65,7 @@ function resolveTemplate(roleId: string): RoleTemplate | null {
     id: copilotRole.id,
     source: copilotRole.source,
     prompt: copilotRole.prompt,
-    description: copilotRole.description,
+    ...(copilotRole.description !== undefined ? { description: copilotRole.description } : {}),
     ...(copilotRole.metadata ? { metadata: copilotRole.metadata } : {}),
   };
 }

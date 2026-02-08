@@ -438,9 +438,11 @@ function locateFrontMatter(
  * const agentsPath = resolveAgentsPath();
  */
 function resolveAgentsPath(): string | null {
-  const agentsPath = path.join(process.cwd(), AGENTS_DIRECTORY);
+  const cwd = path.resolve(process.cwd());
+  const agentsPath = path.join(cwd, AGENTS_DIRECTORY);
   const resolvedAgentsPath = path.resolve(agentsPath);
-  if (!resolvedAgentsPath.startsWith(process.cwd())) {
+  const relativePath = path.relative(cwd, resolvedAgentsPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return null;
   }
   return resolvedAgentsPath;
@@ -460,7 +462,9 @@ function resolveAgentsRealPath(resolvedAgentsPath: string): string | null {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
     const realPath = realpathSync(resolvedAgentsPath);
-    if (!realPath.startsWith(process.cwd())) {
+    const cwd = path.resolve(process.cwd());
+    const relativePath = path.relative(cwd, realPath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       return null;
     }
     return realPath;
