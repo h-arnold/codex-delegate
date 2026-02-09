@@ -61,6 +61,29 @@ function captureWarnings(testFn: () => void): string {
   }
 }
 
+/**
+ * Type-safe wrapper for listing Copilot roles.
+ *
+ * @returns {Array<Record<string, unknown>>} List of roles with type assertion.
+ * @remarks
+ * Reduces duplication by centralizing the type assertion pattern.
+ */
+function listRoles(): Array<Record<string, unknown>> {
+  return copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
+}
+
+/**
+ * Type-safe wrapper for resolving a Copilot role.
+ *
+ * @param {string} roleId - Role identifier.
+ * @returns {Record<string, unknown> | null} Resolved role or null.
+ * @remarks
+ * Reduces duplication by centralizing the type assertion pattern.
+ */
+function resolveRole(roleId: string): Record<string, unknown> | null {
+  return copilotHelpers.resolveCopilotRole(roleId) as Record<string, unknown> | null;
+}
+
 describe('Copilot Agent Discovery', () => {
   it('COPILOT-01: discovers valid .github/agents/*.agent.md files', () => {
     writeAgentFile(
@@ -151,7 +174,7 @@ describe('Copilot Agent Discovery', () => {
       'body.agent.md',
       buildAgentContent(['description: Body role'], 'You are a body tester.'),
     );
-    const resolved = copilotHelpers.resolveCopilotRole('body') as Record<string, unknown> | null;
+    const resolved = resolveRole('body');
     const prompt = resolved?.prompt;
     expect(typeof prompt).toBe('string');
     expect(prompt).toContain('You are a body tester.');
@@ -165,7 +188,7 @@ describe('Copilot Agent Discovery', () => {
       'crlf.agent.md',
       ['---', 'description: CRLF test', '---', '', 'Body with CRLF.'].join('\r\n'),
     );
-    const resolved = copilotHelpers.resolveCopilotRole('crlf') as Record<string, unknown> | null;
+    const resolved = resolveRole('crlf');
     expect(resolved?.description).toBe('CRLF test');
     expect(resolved?.prompt).toContain('Body with CRLF.');
   });
@@ -224,7 +247,7 @@ describe('Copilot Agent Discovery', () => {
       'unknown.agent.md',
       buildAgentContent(['description: Known', 'fancy: ignored'], 'Body'),
     );
-    const resolved = copilotHelpers.resolveCopilotRole('unknown') as Record<string, unknown> | null;
+    const resolved = resolveRole('unknown');
     expect(resolved).not.toBeNull();
     expect(resolved).not.toHaveProperty('metadata');
   });
@@ -362,7 +385,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-14: returns null for unknown role ids', () => {
-    const resolved = copilotHelpers.resolveCopilotRole('unknown') as Record<string, unknown> | null;
+    const resolved = resolveRole('unknown');
     expect(resolved).toBeNull();
   });
 });

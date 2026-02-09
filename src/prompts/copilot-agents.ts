@@ -30,6 +30,20 @@ const FRONT_MATTER_LINE_PATTERN = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/;
 const QUOTE_TRIM_PATTERN = /(^['"]|['"]$)/g;
 
 /**
+ * Remove surrounding quotes from a string.
+ *
+ * @param {string} value - Value to trim quotes from.
+ * @returns {string} Value with quotes removed.
+ * @remarks
+ * Removes leading and trailing single or double quotes.
+ * @example
+ * trimQuotes('"example"'); // 'example'
+ */
+function trimQuotes(value: string): string {
+  return value.replaceAll(QUOTE_TRIM_PATTERN, '');
+}
+
+/**
  * Check whether a filename is a Copilot agent markdown file.
  *
  * @param {string} entry - Directory entry to inspect.
@@ -72,10 +86,10 @@ function parseYamlValue(rawValue: string): string | string[] {
       .split(',')
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
-      .map((value) => value.replaceAll(QUOTE_TRIM_PATTERN, ''));
+      .map(trimQuotes);
   }
 
-  return trimmed.replaceAll(QUOTE_TRIM_PATTERN, '');
+  return trimQuotes(trimmed);
 }
 
 /**
