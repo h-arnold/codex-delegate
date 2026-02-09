@@ -12,7 +12,6 @@ It covers formatting (Prettier), linting (ESLint), TypeScript typing expectation
   - [Purpose](#purpose)
   - [Formatting (Prettier) ✨](#formatting-prettier-)
   - [Linting (ESLint) 🔍](#linting-eslint-)
-  - [Linting (ESLint) 🔍](#linting-eslint--1)
   - [TypeScript expectations 🎯](#typescript-expectations-)
   - [JSDoc policy — REQUIRED for every class, method, and function 📝](#jsdoc-policy--required-for-every-class-method-and-function-)
   - [JSDoc Templates \& Examples](#jsdoc-templates--examples)
@@ -40,7 +39,7 @@ Consistent project layout makes it easy to find code, tests, and build artifacts
 
 Recommended layout
 
-```
+```text
 /src                    # TypeScript source
     /features             # feature or domain folders (e.g. delegates, auth)
         index.ts            # feature-level public exports
@@ -95,10 +94,6 @@ npm run format
 - `lint-staged` runs `prettier --write` on staged files as part of the pre-commit hook. See `package.json` for the exact configuration.
 - Files to format: all source files and markdown docs in the repository.
 - We also include `markdownlint` for stricter Markdown style checks via `.markdownlint.json`. Run `npm run lint:md` to check Markdown files.
-
----
-
-## Linting (ESLint) 🔍
 
 ---
 

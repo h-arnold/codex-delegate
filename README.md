@@ -159,9 +159,3 @@ Wire API note: `codex-delegate` overrides `wire_api` to `responses` by default. 
 ### CI and containers
 
 If you install only production dependencies in CI or Docker you may want to skip Husky there. Set `HUSKY=0` or adapt the `prepare` script (see Husky docs).
-
----
-
-```
-
-```
