@@ -44,14 +44,14 @@ afterEach(() => {
 });
 
 /**
- * Helper to run tests that expect console warnings.
+ * Helper to capture console warnings during test execution.
  *
  * @param {() => void} testFn - Test function to execute.
  * @returns {string} Captured warning messages.
  * @remarks
  * Reduces duplication by centralizing spy setup and teardown.
  */
-function expectWarnings(testFn: () => void): string {
+function captureWarnings(testFn: () => void): string {
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   try {
     testFn();
@@ -171,7 +171,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-09: skips malformed YAML with a warning (no throw)', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(tempDir, 'bad.agent.md', '---\nname: [\n---\nBody');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
       expect(roles.length).toBe(0);
@@ -180,7 +180,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-21: skips malformed flow arrays with trailing characters', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(
         tempDir,
         'bad-flow-trailing.agent.md',
@@ -203,7 +203,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-22: skips unterminated flow arrays with a warning', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(
         tempDir,
         'bad-flow-unterminated.agent.md',
@@ -322,7 +322,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-13: skips files without YAML front matter with a warning', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(tempDir, 'no-front-matter.agent.md', 'You are a test agent.');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
       expect(roles.length).toBe(0);
@@ -331,7 +331,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-15: skips files missing closing front matter delimiter with a warning', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
       const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
       expect(roles.length).toBe(0);
@@ -340,7 +340,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-16: resolve warns on missing closing front matter delimiter', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       writeAgentFile(tempDir, 'no-closing.agent.md', '---\ndescription: Test role\nBody');
       const resolved = copilotHelpers.resolveCopilotRole('no-closing');
       expect(resolved).toBeNull();
@@ -349,7 +349,7 @@ describe('Copilot Agent Discovery', () => {
   });
 
   it('COPILOT-17: skips symlinked agent files with a warning', () => {
-    const warnings = expectWarnings(() => {
+    const warnings = captureWarnings(() => {
       const agentsDir = ensureAgentsDir(tempDir);
       const targetPath = path.join(tempDir, 'outside.md');
       fs.writeFileSync(targetPath, '---\ndescription: Outside\n---\nBody');

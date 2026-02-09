@@ -462,8 +462,9 @@ function resolveAgentsRealPath(resolvedAgentsPath: string): string | null {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
     const realPath = realpathSync(resolvedAgentsPath);
-    const cwd = path.resolve(process.cwd());
-    const relativePath = path.relative(cwd, realPath);
+
+    const realCwd = realpathSync(process.cwd());
+    const relativePath = path.relative(realCwd, realPath);
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       return null;
     }
