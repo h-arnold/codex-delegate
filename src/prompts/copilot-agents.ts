@@ -67,7 +67,7 @@ function readFrontMatterKeyValue(trimmedLine: string): { key: string; rawValue: 
     return null;
   }
 
-  const rawValue = trimmedLine.slice(colonIndex + 1).replace(/^[ \t]+/u, '');
+  const rawValue = trimmedLine.slice(colonIndex + 1).trimStart();
 
   return { key, rawValue };
 }
