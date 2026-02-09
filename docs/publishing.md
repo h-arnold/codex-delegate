@@ -35,8 +35,7 @@ For installation and usage steps, see the
 
 ## Publishing to GitHub Packages (npm)
 
-This project is also configured to publish to the GitHub npm registry at
-[`https://npm.pkg.github.com/`](https://npm.pkg.github.com/).
+This project is also configured to publish to the GitHub npm registry at [`https://npm.pkg.github.com/`](https://npm.pkg.github.com/).
 
 Publishing locally
 
