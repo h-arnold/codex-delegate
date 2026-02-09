@@ -1,6 +1,6 @@
 # Publishing to npm (public registry)
 
-This project can be published to the public npm registry at `https://registry.npmjs.org/`.
+This project can be published to the public npm registry at [`https://registry.npmjs.org/`](https://registry.npmjs.org/).
 
 Key points:
 
@@ -21,8 +21,10 @@ Publishing locally (npm registry)
 
 - Then run:
 
+  ```bash
   npm run build
   npm publish --registry=https://registry.npmjs.org/ --access public
+  ```
 
 Using the package
 
@@ -31,9 +33,9 @@ For installation and usage steps, see the
 
 ---
 
-# Publishing to GitHub Packages (npm)
+## Publishing to GitHub Packages (npm)
 
-This project is also configured to publish to the GitHub npm registry at `https://npm.pkg.github.com/`.
+This project is also configured to publish to the GitHub npm registry at [`https://npm.pkg.github.com/`](https://npm.pkg.github.com/).
 
 Publishing locally
 
@@ -45,8 +47,10 @@ Publishing locally
 
 - Then run:
 
+  ```bash
   npm run build
   npm publish --registry=https://npm.pkg.github.com/
+  ```
 
 Using the package
 

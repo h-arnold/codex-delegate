@@ -36,7 +36,7 @@ This document summarises the runtime workflow, main components, and configuratio
 
 These defaults are defined in `src/config/default-options.ts`. Only non-CLI values are persisted by `codex-delegate init` (the config file excludes `role`, `task`, and `instructions`).
 
-```
+```text
 sandbox: "danger-full-access"
 approval: "never"
 network: true
