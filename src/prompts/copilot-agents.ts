@@ -26,8 +26,8 @@ const AGENTS_DIRECTORY = path.join('.github', 'agents');
 const AGENT_SUFFIX = '.agent.md';
 const FRONT_MATTER_DELIMITER = '---';
 const FRONT_MATTER_END_OFFSET = 2;
-const FRONT_MATTER_LINE_PATTERN = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/;
-const QUOTE_TRIM_PATTERN = /(^['"]|['"]$)/g;
+const QUOTE_CHARS = new Set(['"', "'"]);
+const FRONT_MATTER_KEY_PATTERN = /^[0-9A-Za-z_-]+$/u;
 
 /**
  * Remove surrounding quotes from a string.
@@ -40,7 +40,36 @@ const QUOTE_TRIM_PATTERN = /(^['"]|['"]$)/g;
  * trimQuotes('"example"'); // 'example'
  */
 function trimQuotes(value: string): string {
-  return value.replaceAll(QUOTE_TRIM_PATTERN, '');
+  const startIndex = Number(QUOTE_CHARS.has(value[0] ?? ''));
+  const endIndex = value.length - Number(QUOTE_CHARS.has(value[value.length - 1] ?? ''));
+
+  return value.slice(startIndex, endIndex);
+}
+
+/**
+ * Parse a trimmed front matter line into a key/value pair.
+ *
+ * @param {string} trimmedLine - Line with leading and trailing whitespace removed.
+ * @returns {{ key: string; rawValue: string } | null} Parsed key/value or null when invalid.
+ */
+function readFrontMatterKeyValue(trimmedLine: string): { key: string; rawValue: string } | null {
+  if (trimmedLine.length === 0) {
+    return null;
+  }
+
+  const colonIndex = trimmedLine.indexOf(':');
+  if (colonIndex <= 0) {
+    return null;
+  }
+
+  const key = trimmedLine.slice(0, colonIndex).trimEnd();
+  if (!FRONT_MATTER_KEY_PATTERN.test(key)) {
+    return null;
+  }
+
+  const rawValue = trimmedLine.slice(colonIndex + 1).replace(/^[ \t]+/u, '');
+
+  return { key, rawValue };
 }
 
 /**
@@ -258,12 +287,12 @@ function parseFrontMatterKeyValue(line: string): { key: string; rawValue: string
     return null;
   }
 
-  const match = FRONT_MATTER_LINE_PATTERN.exec(trimmed);
-  if (!match) {
+  const parsed = readFrontMatterKeyValue(trimmed);
+  if (!parsed) {
     throw new Error('Malformed YAML front matter line.');
   }
 
-  return { key: match[1] ?? '', rawValue: match[2] ?? '' };
+  return parsed;
 }
 
 /**
@@ -273,7 +302,7 @@ function parseFrontMatterKeyValue(line: string): { key: string; rawValue: string
  * @returns {boolean} `true` when the line looks like a `key: value` entry.
  */
 function isFrontMatterKeyLine(line: string): boolean {
-  return FRONT_MATTER_LINE_PATTERN.test(line);
+  return Boolean(readFrontMatterKeyValue(line.trim()));
 }
 
 /**
@@ -284,11 +313,10 @@ function isFrontMatterKeyLine(line: string): boolean {
  * @throws {Error} When the line is malformed or not a scalar.
  */
 function parseYamlListItem(line: string): string {
-  const listMatch = /^-\s*(.*)$/.exec(line);
-  if (!listMatch) {
+  if (!line.startsWith('-')) {
     throw new Error('Malformed YAML front matter line.');
   }
-  const itemValue = parseYamlValue(listMatch[1] ?? '');
+  const itemValue = parseYamlValue(line.slice(1).trimStart());
   if (Array.isArray(itemValue)) {
     throw new Error('Malformed YAML array value.');
   }
