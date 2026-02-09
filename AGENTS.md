@@ -22,6 +22,32 @@ Key notes:
 
 Create new roles by adding prompt templates in `.codex/<role>.md`. Keep templates non-empty so they are discovered, and verify with `codex-delegate --list-roles` before running `codex-delegate --role <role> --task "..."`.
 
+## Standard workflow for non-trivial tasks
+
+For any non-trivial change, use a structured implement-and-review loop. The aim is to keep tasks small and focused, make the code changes once, then iterate until the review is clean.
+
+1. **Assign a small, focused task to the implementation agent**
+   - Keep the scope narrow: one feature or fix at a time.
+   - Provide relevant context, file locations, and constraints.
+   - Request updates to tests and documentation where needed.
+
+2. **Implementation agent delivers changes**
+   - Makes the minimal change that satisfies the requirements.
+   - Runs relevant checks and reports outcomes.
+
+3. **Reviewer agent evaluates the change**
+   - Checks structure, correctness, standards, and tests.
+   - Provides concrete feedback and makes fixes if required.
+
+4. **Implementer addresses review feedback**
+   - Applies changes in response to reviewer notes.
+   - Re-runs relevant checks.
+
+5. **Repeat review until clean**
+   - Continue the loop until the review comes back clean and no further changes are required.
+
+This is the default workflow for non-trivial tasks and should be followed unless explicitly instructed otherwise.
+
 ## Coding standards
 
 - Follow the repository code style guide in `docs/code-style.md` (Prettier formatting, ESLint rules, explicit return types, no `any`, and JSDoc requirements).

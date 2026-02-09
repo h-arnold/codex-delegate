@@ -147,9 +147,11 @@ function emitStreamUpdate(item: StreamedItem): void {
       process.stdout.write(`Command executed: ${item.command}\n`);
       break;
     case 'file_change':
-      item.changes.forEach((change) => {
-        process.stdout.write(`File change: ${change.kind}: ${change.path}\n`);
-      });
+      if (isFileChangeItem(item)) {
+        item.changes.forEach((change) => {
+          process.stdout.write(`File change: ${change.kind}: ${change.path}\n`);
+        });
+      }
       break;
     case 'mcp_tool_call':
       process.stdout.write(`Tool call: ${item.server}:${item.tool}\n`);
@@ -206,6 +208,18 @@ function logStreamEvent(
 }
 
 /**
+ * Determine whether a streamed event contains a completed item payload.
+ *
+ * @param {StreamedEvent} event - Streamed event to inspect.
+ * @returns {boolean} `true` when the event is an item.completed with an item payload.
+ */
+function isCompletedStreamItem(
+  event: StreamedEvent,
+): event is StreamedEvent & { type: 'item.completed'; item: StreamedItem } {
+  return event.type === 'item.completed' && Boolean(event.item);
+}
+
+/**
  * Handle a streamed item.completed event.
  *
  * @param {TurnFailedEvent} event - Streamed event to process.
@@ -217,7 +231,7 @@ function logStreamEvent(
  * handleItemCompletedEvent(event, results);
  */
 function handleItemCompletedEvent(event: StreamedEvent, results: StreamResults): void {
-  if (event.type !== 'item.completed' || !event.item) {
+  if (!isCompletedStreamItem(event)) {
     return;
   }
 

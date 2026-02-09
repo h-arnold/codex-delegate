@@ -1,4 +1,4 @@
-import { resolvePromptTemplate } from './prompt-templates.js';
+import { resolveTemplate } from './role-sources.js';
 import type { DelegateOptions } from '../types/delegate-options.js';
 
 /**
@@ -12,7 +12,8 @@ import type { DelegateOptions } from '../types/delegate-options.js';
  * buildPrompt({ role: 'implementation', task: 'Add tests', instructions: 'Focus on unit tests' });
  */
 function buildPrompt(options: DelegateOptions): string {
-  const template = resolvePromptTemplate(options.role);
+  const resolved = resolveTemplate(options.role);
+  const template = resolved?.prompt ?? '';
   const sections = [
     template,
     options.instructions ? `Instructions:\n${options.instructions}` : '',

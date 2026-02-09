@@ -5,28 +5,37 @@ import path from 'node:path';
 
 import { Codex } from '@openai/codex-sdk';
 
-import { handleImmediateFlag, printHelp } from './cli/help.js';
-import {
+import { parseArgs, type ReasoningLevel, validateOptions } from './cli/options.js';
+import { ensureCodexConfig } from './config/codex-config.js';
+import { tailLogFile } from './logging/logging.js';
+import { buildPrompt } from './prompts/prompt-builder.js';
+import { listRoles } from './prompts/role-sources.js';
+import { printFinalResponse, printSummaries } from './reporting/reporter.js';
+import { resolveOutputSchema } from './schema/output-schema.js';
+import { processStream } from './stream/stream-processor.js';
+import type { DelegateOptions } from './types/delegate-options.js';
+
+export { handleImmediateFlag, printHelp } from './cli/help.js';
+export {
   applyBooleanOption,
   isBooleanOption,
   isOption,
   parseArgs,
   parseBoolean,
-  type ReasoningLevel,
   validateOptions,
 } from './cli/options.js';
-import { ensureCodexConfig } from './config/codex-config.js';
-import { tailLogFile } from './logging/logging.js';
-import { buildPrompt } from './prompts/prompt-builder.js';
-import { listPromptRoles, resolvePromptTemplate } from './prompts/prompt-templates.js';
-import { printFinalResponse, printSummaries } from './reporting/reporter.js';
-import { resolveOutputSchema } from './schema/output-schema.js';
-import {
+export type { ReasoningLevel } from './cli/options.js';
+export { buildPrompt } from './prompts/prompt-builder.js';
+export { listPromptRoles, resolvePromptTemplate } from './prompts/prompt-templates.js';
+export { printFinalResponse, printSummaries } from './reporting/reporter.js';
+export { resolveOutputSchema } from './schema/output-schema.js';
+export { tailLogFile } from './logging/logging.js';
+export {
   handleItemCompleted,
   handleTurnCompleted,
   processStream,
 } from './stream/stream-processor.js';
-import {
+export {
   isAgentMessage,
   isCommandExecution,
   isFileChangeArray,
@@ -36,7 +45,7 @@ import {
   isWebSearch,
   toStreamResults,
 } from './stream/stream-results.js';
-import type { DelegateOptions } from './types/delegate-options.js';
+export type { DelegateOptions } from './types/delegate-options.js';
 
 const DEFAULT_TIMEOUT_MINUTES = 10;
 const LOG_TAIL_LINE_COUNT = 5;
@@ -220,13 +229,11 @@ function ensureTaskProvided(options: DelegateOptions): void {
  * @remarks
  * When no roles are available, a warning is printed and execution continues.
  * @example
- * validateRoleSelection(options.role, listPromptRoles());
+ * validateRoleSelection(options.role, listRoles().map((role) => role.id));
  */
 function validateRoleSelection(role: string, availableRoles: string[]): void {
   if (availableRoles.length === 0) {
-    process.stderr.write(
-      'No roles available in .codex; continuing without role-specific instructions.\n',
-    );
+    process.stderr.write('No roles available; continuing without role-specific instructions.\n');
     return;
   }
 
@@ -430,7 +437,10 @@ async function run(): Promise<void> {
   const outputSchema = resolveOutputSchema(options, getDefaultOutputSchema());
   validateOptions(options);
 
-  validateRoleSelection(options.role, listPromptRoles());
+  validateRoleSelection(
+    options.role,
+    listRoles().map((role) => role.id),
+  );
 
   const logSetup = createLogSetup(options);
 
@@ -478,7 +488,7 @@ async function run(): Promise<void> {
  * @remarks
  * This wrapper keeps CLI error handling consistent for end users.
  * @example
- * void main();
+ * await main();
  */
 async function main(): Promise<void> {
   try {
@@ -490,41 +500,9 @@ async function main(): Promise<void> {
   }
 }
 
-// Export internal helpers for testing
-export {
-  applyBooleanOption,
-  buildPrompt,
-  handleImmediateFlag,
-  handleItemCompleted,
-  handleTurnCompleted,
-  isAgentMessage,
-  isBooleanOption,
-  isCommandExecution,
-  isFileChangeArray,
-  isFileChangeItem,
-  isMcpToolCall,
-  isOption,
-  isString,
-  isWebSearch,
-  listPromptRoles,
-  parseArgs,
-  parseBoolean,
-  printFinalResponse,
-  printHelp,
-  printSummaries,
-  processStream,
-  main,
-  resolveOutputSchema,
-  resolvePromptTemplate,
-  run,
-  tailLogFile,
-  toStreamResults,
-  validateOptions,
-};
-export type { DelegateOptions, ReasoningLevel };
+export { main, run };
 
-// Run the entrypoint only when not in the test environment to avoid side-effects during imports
+// Run the entrypoint only when not in the test environment to avoid side-effects.
 if (process.env.NODE_ENV !== 'test') {
-  // top-level await is unavailable with CommonJS; call the async entrypoint explicitly
-  void main();
+  await main();
 }
