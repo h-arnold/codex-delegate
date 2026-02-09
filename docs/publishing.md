@@ -1,7 +1,6 @@
 # Publishing to npm (public registry)
 
-This project can be published to the public npm registry at
-[`https://registry.npmjs.org/`](https://registry.npmjs.org/).
+This project can be published to the public npm registry at [`https://registry.npmjs.org/`](https://registry.npmjs.org/).
 
 Key points:
 
