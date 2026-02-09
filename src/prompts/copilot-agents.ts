@@ -30,6 +30,20 @@ const FRONT_MATTER_LINE_PATTERN = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/;
 const QUOTE_TRIM_PATTERN = /(^['"]|['"]$)/g;
 
 /**
+ * Remove surrounding quotes from a string.
+ *
+ * @param {string} value - Value to trim quotes from.
+ * @returns {string} Value with quotes removed.
+ * @remarks
+ * Removes leading and trailing single or double quotes.
+ * @example
+ * trimQuotes('"example"'); // 'example'
+ */
+function trimQuotes(value: string): string {
+  return value.replaceAll(QUOTE_TRIM_PATTERN, '');
+}
+
+/**
  * Check whether a filename is a Copilot agent markdown file.
  *
  * @param {string} entry - Directory entry to inspect.
@@ -72,10 +86,10 @@ function parseYamlValue(rawValue: string): string | string[] {
       .split(',')
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
-      .map((value) => value.replaceAll(QUOTE_TRIM_PATTERN, ''));
+      .map(trimQuotes);
   }
 
-  return trimmed.replaceAll(QUOTE_TRIM_PATTERN, '');
+  return trimQuotes(trimmed);
 }
 
 /**
@@ -438,9 +452,11 @@ function locateFrontMatter(
  * const agentsPath = resolveAgentsPath();
  */
 function resolveAgentsPath(): string | null {
-  const agentsPath = path.join(process.cwd(), AGENTS_DIRECTORY);
+  const cwd = path.resolve(process.cwd());
+  const agentsPath = path.join(cwd, AGENTS_DIRECTORY);
   const resolvedAgentsPath = path.resolve(agentsPath);
-  if (!resolvedAgentsPath.startsWith(process.cwd())) {
+  const relativePath = path.relative(cwd, resolvedAgentsPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return null;
   }
   return resolvedAgentsPath;
@@ -460,7 +476,10 @@ function resolveAgentsRealPath(resolvedAgentsPath: string): string | null {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolved path validated and constrained to project files
     const realPath = realpathSync(resolvedAgentsPath);
-    if (!realPath.startsWith(process.cwd())) {
+
+    const realCwd = realpathSync(process.cwd());
+    const relativePath = path.relative(realCwd, realPath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
       return null;
     }
     return realPath;
