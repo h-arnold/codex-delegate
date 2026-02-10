@@ -46,6 +46,25 @@ npm install -g @h-arnold/codex-delegate
 codex-delegate --role implementation --task "Add input validation to the assessor controller" --instructions "Use existing DTO patterns; update tests."
 ```
 
+## Install as a Codex skill
+
+You can install the repository skill directly from this project with the built-in skill installer:
+
+```text
+$skill-installer
+```
+
+Then choose "Install from GitHub path" and use:
+
+- Repository: `h-arnold/codex-delegate`
+- Skill folder: `.agents/skills/codex-delegate`
+
+Direct install command:
+
+```bash
+$skill-installer https://github.com/h-arnold/codex-delegate .agents/skills/codex-delegate
+```
+
 ## Initialise and add agent files
 
 1. Initialise the `.codex` folder and default config:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Delegate"
+  short_description: "Run focused sub-agents with codex-delegate"
+  default_prompt: "Use $codex-delegate to delegate this task through an implementation-review loop."
