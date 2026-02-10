@@ -1,6 +1,8 @@
 import { lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
+import { parse as parseYaml } from 'yaml';
+
 type CopilotMetadata = {
   tools?: string[];
   model?: string;
@@ -26,50 +28,48 @@ const AGENTS_DIRECTORY = path.join('.github', 'agents');
 const AGENT_SUFFIX = '.agent.md';
 const FRONT_MATTER_DELIMITER = '---';
 const FRONT_MATTER_END_OFFSET = 2;
-const QUOTE_CHARS = new Set(['"', "'"]);
-const FRONT_MATTER_KEY_PATTERN = /^[0-9A-Za-z_-]+$/u;
 
 /**
- * Remove surrounding quotes from a string.
+ * Coerce a YAML scalar value to a trimmed string.
  *
- * @param {string} value - Value to trim quotes from.
- * @returns {string} Value with quotes removed.
+ * @param {unknown} value - YAML scalar value.
+ * @returns {string | null} Trimmed string value, or null when unsupported.
  * @remarks
- * Removes leading and trailing single or double quotes.
+ * Only string, number, and boolean scalars are supported.
  * @example
- * trimQuotes('"example"'); // 'example'
+ * parseYamlScalar('example');
  */
-function trimQuotes(value: string): string {
-  const startIndex = Number(QUOTE_CHARS.has(value[0] ?? ''));
-  const endIndex = value.length - Number(QUOTE_CHARS.has(value[value.length - 1] ?? ''));
-
-  return value.slice(startIndex, endIndex);
+function parseYamlScalar(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return null;
 }
 
 /**
- * Parse a trimmed front matter line into a key/value pair.
+ * Parse a YAML value from front matter.
  *
- * @param {string} trimmedLine - Line with leading and trailing whitespace removed.
- * @returns {{ key: string; rawValue: string } | null} Parsed key/value or null when invalid.
+ * @param {unknown} value - YAML value to normalise.
+ * @returns {string | string[]} Parsed scalar or scalar list value.
+ * @throws {Error} When the value type is unsupported.
  */
-function readFrontMatterKeyValue(trimmedLine: string): { key: string; rawValue: string } | null {
-  if (trimmedLine.length === 0) {
-    return null;
+function parseYamlFrontMatterValue(value: unknown): string | string[] {
+  if (Array.isArray(value)) {
+    const parsedArray = value
+      .map((item) => parseYamlScalar(item))
+      .filter((item): item is string => item !== null && item.length > 0);
+    return parsedArray;
   }
 
-  const colonIndex = trimmedLine.indexOf(':');
-  if (colonIndex <= 0) {
-    return null;
+  const parsedScalar = parseYamlScalar(value);
+  if (parsedScalar !== null) {
+    return parsedScalar;
   }
 
-  const key = trimmedLine.slice(0, colonIndex).trimEnd();
-  if (!FRONT_MATTER_KEY_PATTERN.test(key)) {
-    return null;
-  }
-
-  const rawValue = trimmedLine.slice(colonIndex + 1).trimStart();
-
-  return { key, rawValue };
+  throw new Error('Malformed YAML front matter line.');
 }
 
 /**
@@ -87,316 +87,34 @@ function isAgentFile(entry: string): boolean {
 }
 
 /**
- * Parse a YAML scalar or inline list into a JavaScript value.
- *
- * @param {string} rawValue - Raw YAML value string.
- * @returns {string | string[]} Parsed value, supporting simple strings and inline string arrays.
- * @throws {Error} When the value looks like an array but is malformed.
- * @remarks
- * This parser supports the subset of YAML used by Copilot agent front matter.
- * @example
- * parseYamlValue("['read', 'search']");
- */
-function parseYamlValue(rawValue: string): string | string[] {
-  const trimmed = rawValue.trim();
-  if (trimmed.length === 0) {
-    return '';
-  }
-
-  if (trimmed.startsWith('[')) {
-    if (!trimmed.endsWith(']')) {
-      throw new Error('Malformed YAML array value.');
-    }
-    const inner = trimmed.slice(1, -1).trim();
-    if (inner.length === 0) {
-      return [];
-    }
-    return inner
-      .split(',')
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0)
-      .map(trimQuotes);
-  }
-
-  return trimQuotes(trimmed);
-}
-
-/**
  * Parse YAML front matter from the provided lines.
  *
  * @param {string[]} lines - Lines between the front matter delimiters.
  * @returns {{ frontMatter: Record<string, string | string[]> }} Parsed front matter.
- * @throws {Error} When a line is malformed.
+ * @throws {Error} When front matter is not a YAML mapping.
  * @remarks
- * Only simple `key: value` pairs and inline arrays are supported.
+ * Uses a standard YAML parser to match real-world Copilot agent files.
  * @example
  * parseFrontMatterLines(['description: Example']);
  */
 function parseFrontMatterLines(lines: string[]): {
   frontMatter: Record<string, string | string[]>;
 } {
+  const rawParsed = parseYaml(lines.join('\n'));
+  if (!rawParsed) {
+    return { frontMatter: {} };
+  }
+  if (typeof rawParsed !== 'object' || Array.isArray(rawParsed)) {
+    throw new Error('Malformed YAML front matter line.');
+  }
+
+  const parsedObject = rawParsed as Record<string, unknown>;
   const frontMatter: Record<string, string | string[]> = {};
-  for (let index = 0; index < lines.length; index += 1) {
-    const parsedEntry = parseFrontMatterEntry(lines, index);
-    if (!parsedEntry) {
-      continue;
-    }
-    frontMatter[parsedEntry.key] = parsedEntry.value;
-    index = parsedEntry.nextIndex;
+  for (const [key, value] of Object.entries(parsedObject)) {
+    frontMatter[key] = parseYamlFrontMatterValue(value);
   }
+
   return { frontMatter };
-}
-
-type FrontMatterEntry = {
-  key: string;
-  value: string | string[];
-  nextIndex: number;
-};
-
-/**
- * Parse a single front matter entry, including multi-line list blocks.
- *
- * @param {string[]} lines - Front matter lines.
- * @param {number} startIndex - Index of the current line.
- * @returns {FrontMatterEntry | null} Parsed entry or null for empty lines.
- * @throws {Error} When a line is malformed.
- * @remarks
- * List blocks are only parsed when the key has no inline value.
- */
-function parseFrontMatterEntry(lines: string[], startIndex: number): FrontMatterEntry | null {
-  const keyValue = parseFrontMatterKeyValue(lines[startIndex] ?? '');
-  if (!keyValue) {
-    return null;
-  }
-
-  const blockValue =
-    keyValue.rawValue.trim().length === 0 ? readYamlValueBlock(lines, startIndex + 1) : null;
-  if (blockValue) {
-    return { key: keyValue.key, value: blockValue.value, nextIndex: blockValue.lastIndex };
-  }
-
-  return {
-    key: keyValue.key,
-    value: parseYamlValue(keyValue.rawValue),
-    nextIndex: startIndex,
-  };
-}
-
-type ValueBlockResult = {
-  value: string | string[];
-  lastIndex: number;
-};
-
-/**
- * Read a YAML block value following a key with no inline value.
- *
- * @param {string[]} lines - Front matter lines.
- * @param {number} startIndex - Index to start scanning from.
- * @returns {ValueBlockResult | null} Parsed value and last index, or null when none found.
- * @throws {Error} When the list or flow array is malformed.
- * @remarks
- * Stops parsing when a new front matter key is encountered.
- */
-function readYamlValueBlock(lines: string[], startIndex: number): ValueBlockResult | null {
-  const nextLine = findNextNonEmptyLine(lines, startIndex);
-  if (!nextLine) {
-    return null;
-  }
-  if (isFrontMatterKeyLine(nextLine.trimmed)) {
-    return null;
-  }
-  if (nextLine.trimmed.startsWith('[')) {
-    return readYamlFlowArrayBlock(lines, nextLine.index);
-  }
-  if (nextLine.trimmed.startsWith('-')) {
-    return readYamlListBlock(lines, nextLine.index);
-  }
-  throw new Error('Malformed YAML front matter line.');
-}
-
-/**
- * Read a YAML list block.
- *
- * @param {string[]} lines - Front matter lines.
- * @param {number} startIndex - Index of the first list item.
- * @returns {ValueBlockResult} List values and last index.
- * @throws {Error} When the list items are malformed.
- * @remarks
- * Stops parsing when a new front matter key is encountered.
- */
-function readYamlListBlock(lines: string[], startIndex: number): ValueBlockResult {
-  const listValues: string[] = [];
-  let index = startIndex;
-
-  for (; index < lines.length; index += 1) {
-    const nextTrimmed = (lines[index] ?? '').trim();
-    if (nextTrimmed.length === 0) {
-      continue;
-    }
-    if (isFrontMatterKeyLine(nextTrimmed)) {
-      break;
-    }
-    listValues.push(parseYamlListItem(nextTrimmed));
-  }
-
-  if (listValues.length === 0) {
-    throw new Error('Malformed YAML front matter line.');
-  }
-
-  return { value: listValues, lastIndex: index - 1 };
-}
-
-/**
- * Read a multi-line YAML flow array block.
- *
- * @param {string[]} lines - Front matter lines.
- * @param {number} startIndex - Index of the opening bracket line.
- * @returns {ValueBlockResult} Array values and last index.
- * @throws {Error} When the array is malformed or incomplete.
- */
-function readYamlFlowArrayBlock(lines: string[], startIndex: number): ValueBlockResult {
-  let index = startIndex;
-  let buffer = '';
-
-  for (; index < lines.length; index += 1) {
-    const trimmed = (lines[index] ?? '').trim();
-    if (trimmed.length === 0) {
-      continue;
-    }
-    buffer = appendFlowArrayBuffer(buffer, trimmed);
-    const closing = findFlowArrayClosing(buffer);
-    if (closing) {
-      assertNoTrailingCharacters(closing.trailing);
-      return { value: parseYamlArrayValue(closing.arrayText), lastIndex: index };
-    }
-  }
-
-  throw new Error('Malformed YAML array value.');
-}
-
-/**
- * Parse a front matter line into a key and raw value.
- *
- * @param {string} line - Front matter line.
- * @returns {{ key: string; rawValue: string } | null} Parsed key/value or null for empty lines.
- * @throws {Error} When the line is malformed.
- */
-function parseFrontMatterKeyValue(line: string): { key: string; rawValue: string } | null {
-  const trimmed = line.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  const parsed = readFrontMatterKeyValue(trimmed);
-  if (!parsed) {
-    throw new Error('Malformed YAML front matter line.');
-  }
-
-  return parsed;
-}
-
-/**
- * Check whether a front matter line declares a new key.
- *
- * @param {string} line - Trimmed line to inspect.
- * @returns {boolean} `true` when the line looks like a `key: value` entry.
- */
-function isFrontMatterKeyLine(line: string): boolean {
-  return Boolean(readFrontMatterKeyValue(line.trim()));
-}
-
-/**
- * Parse a YAML list item line.
- *
- * @param {string} line - Trimmed list line.
- * @returns {string} Parsed list item.
- * @throws {Error} When the line is malformed or not a scalar.
- */
-function parseYamlListItem(line: string): string {
-  if (!line.startsWith('-')) {
-    throw new Error('Malformed YAML front matter line.');
-  }
-  const itemValue = parseYamlValue(line.slice(1).trimStart());
-  if (Array.isArray(itemValue)) {
-    throw new Error('Malformed YAML array value.');
-  }
-  return itemValue;
-}
-
-/**
- * Find the next non-empty line.
- *
- * @param {string[]} lines - Front matter lines.
- * @param {number} startIndex - Index to start scanning from.
- * @returns {{ index: number; trimmed: string } | null} Line details or null when none found.
- */
-function findNextNonEmptyLine(
-  lines: string[],
-  startIndex: number,
-): { index: number; trimmed: string } | null {
-  for (let index = startIndex; index < lines.length; index += 1) {
-    const trimmed = (lines[index] ?? '').trim();
-    if (trimmed.length > 0) {
-      return { index, trimmed };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Append a trimmed flow array line into the working buffer.
- *
- * @param {string} buffer - Current buffer.
- * @param {string} line - Trimmed line to append.
- * @returns {string} Updated buffer.
- */
-function appendFlowArrayBuffer(buffer: string, line: string): string {
-  return buffer.length === 0 ? line : `${buffer} ${line}`;
-}
-
-/**
- * Find the closing bracket for a flow array buffer.
- *
- * @param {string} buffer - Flow array buffer.
- * @returns {{ arrayText: string; trailing: string } | null} Array text and trailing content.
- */
-function findFlowArrayClosing(buffer: string): { arrayText: string; trailing: string } | null {
-  const closingIndex = buffer.indexOf(']');
-  if (closingIndex === -1) {
-    return null;
-  }
-  return {
-    arrayText: buffer.slice(0, closingIndex + 1),
-    trailing: buffer.slice(closingIndex + 1),
-  };
-}
-
-/**
- * Assert that there is no trailing content after a flow array closing bracket.
- *
- * @param {string} trailing - Trailing content to validate.
- * @throws {Error} When trailing content is present.
- */
-function assertNoTrailingCharacters(trailing: string): void {
-  if (trailing.trim().length > 0) {
-    throw new Error('Malformed YAML array value.');
-  }
-}
-
-/**
- * Parse a YAML flow array value.
- *
- * @param {string} rawValue - Array value string.
- * @returns {string[]} Parsed array values.
- * @throws {Error} When the value is not an array.
- */
-function parseYamlArrayValue(rawValue: string): string[] {
-  const parsedValue = parseYamlValue(rawValue);
-  if (!Array.isArray(parsedValue)) {
-    throw new Error('Malformed YAML array value.');
-  }
-  return parsedValue;
 }
 
 /**

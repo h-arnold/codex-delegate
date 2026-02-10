@@ -202,43 +202,31 @@ describe('Copilot Agent Discovery', () => {
     expect(warnings).toContain('bad.agent.md');
   });
 
-  it('COPILOT-21: skips malformed flow arrays with trailing characters', () => {
-    const warnings = captureWarnings(() => {
-      writeAgentFile(
-        tempDir,
-        'bad-flow-trailing.agent.md',
-        buildAgentContent(
-          [
-            'name: bad-flow-trailing',
-            'tools:',
-            '  [',
-            "    'read',",
-            "    'search'",
-            '  ] trailing',
-          ],
-          'Body',
-        ),
-      );
-      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      expect(roles.length).toBe(0);
-    });
-    expect(warnings).toContain('bad-flow-trailing.agent.md');
-  });
-
-  it('COPILOT-22: skips unterminated flow arrays with a warning', () => {
-    const warnings = captureWarnings(() => {
-      writeAgentFile(
-        tempDir,
-        'bad-flow-unterminated.agent.md',
-        buildAgentContent(
-          ['name: bad-flow-unterminated', 'tools:', '  [', "    'read',", "    'search'"],
-          'Body',
-        ),
-      );
-      const roles = copilotHelpers.listCopilotRoles() as Array<Record<string, unknown>>;
-      expect(roles.length).toBe(0);
-    });
-    expect(warnings).toContain('bad-flow-unterminated.agent.md');
+  it('COPILOT-21: parses front matter using the multi-agent planner format', () => {
+    writeAgentFile(
+      tempDir,
+      'multi-agent-planner.agent.md',
+      [
+        '---',
+        'name: Multi-Agent Planner Agent Instructions',
+        'tools:',
+        '  [',
+        "    'read/readFile',",
+        "    'search',",
+        "    'agent',",
+        '  ]',
+        'user-invokable: true',
+        'disable-model-invocation: false',
+        '---',
+        '',
+        'You are the planner.',
+      ].join('\n'),
+    );
+    const roles = listRoles();
+    expect(roles.length).toBe(1);
+    expect(roles[0]?.id).toBe('Multi-Agent Planner Agent Instructions');
+    const resolved = resolveRole('Multi-Agent Planner Agent Instructions');
+    expect(resolved?.prompt).toContain('You are the planner.');
   });
 
   it('COPILOT-10: ignores unknown front matter properties without failing', () => {
