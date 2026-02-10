@@ -1,5 +1,18 @@
 # Release Notes
 
+## v0.3.0
+
+### Highlights (v0.3.0)
+
+- Package installable Codex skills under `.agents/skills/codex-delegate` for easier reuse.
+- Add dynamic role discovery guidance directly to skill documentation.
+- Introduce a `run_delegate.sh` wrapper script with coverage via new tests.
+- Improve Copilot agent front matter parsing to align with `.github/agents/multi-agent-planner.agent.md`.
+
+### Notes (v0.3.0)
+
+- Behaviour and compatibility updates include refined skill packaging expectations, role discovery guidance updates, and expanded Copilot YAML front matter support.
+
 ## v0.2.0
 
 ### Highlights (v0.2.0)

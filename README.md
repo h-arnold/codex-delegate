@@ -46,6 +46,13 @@ npm install -g @h-arnold/codex-delegate
 codex-delegate --role implementation --task "Add input validation to the assessor controller" --instructions "Use existing DTO patterns; update tests."
 ```
 
+## Copilot agent files
+
+`codex-delegate` also discovers roles defined in `.github/agents/*.agent.md`. Use YAML front
+matter with `name` (optional) and `description` (optional); if `name` is missing the filename is
+used. Optional metadata fields (`tools`, `model`, `target`, `mcp-servers`) are preserved when
+present. See `docs/codex-delegation.md` for details.
+
 ## Install as a Codex skill
 
 You can install the repository skill directly from this project with the built-in skill installer:
@@ -63,6 +70,12 @@ Direct install command:
 
 ```bash
 $skill-installer https://github.com/h-arnold/codex-delegate .agents/skills/codex-delegate
+```
+
+The skill includes a helper script for consistent invocation:
+
+```bash
+scripts/run_delegate.sh "<role>" "<task>" "<working_dir>" "<instructions>" 10
 ```
 
 ## Initialise and add agent files

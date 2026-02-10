@@ -23,6 +23,7 @@ This document summarises the runtime workflow, main components, and configuratio
 - `src/config/default-options.ts`: Default option values used by both CLI parsing and config initialisation.
 - `src/config/codex-config.ts`: Reading, normalising, and writing `.codex/codex-delegate-config.json`.
 - `src/prompts/prompt-templates.ts`: Role discovery and template resolution in `.codex`.
+- `src/prompts/copilot-agents.ts`: Copilot role discovery from `.github/agents/*.agent.md`, YAML front matter parsing, metadata extraction, and safe path handling.
 - `src/prompts/prompt-builder.ts`: Composes the final prompt.
 - `src/stream/stream-processor.ts`: Stream consumption, timeouts, heartbeats, and item processing.
 - `src/stream/stream-results.ts`: Streamed item type guards and result aggregation.
@@ -79,4 +80,5 @@ The `.codex/codex-delegate-config.json` file stores all options except `role`, `
 
 - The `init` command creates the `.codex` directory and the default config file if missing.
 - Role templates are discovered by scanning `.codex` for non-empty `.md` files, excluding `AGENTS.md`.
+- Copilot agent discovery reads `.github/agents/*.agent.md` with YAML front matter, ignores invalid files, skips symlinks, and de-duplicates role identifiers.
 - All file reads for templates, schemas, and logs are constrained to the current project directory.

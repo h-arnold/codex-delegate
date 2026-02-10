@@ -42,6 +42,16 @@ identifier uses the `name` front matter field when available and otherwise falls
 filename (without the `.agent.md` suffix). `description` is optional and only used as metadata in
 role listings.
 
+Additional Copilot discovery rules:
+
+- YAML front matter is required. Files missing opening or closing delimiters are skipped with a warning.
+- Invalid YAML front matter is skipped with a warning (no hard failure).
+- `--list-roles` reads front matter only; prompt bodies are parsed only when resolving a role.
+- Duplicate role identifiers are ignored to keep resolution deterministic.
+- Symlinked agent files are ignored to prevent path escapes.
+- Optional metadata fields are preserved when present: `tools` (list), `model`, `target`,
+  and `mcp-servers`.
+
 ## Prerequisites
 
 - Node.js 22+ and npm available in your environment.
@@ -130,3 +140,33 @@ You can also set `model`, `reasoning`, `workingDir`, `structured`, `schemaFile`,
 1. Delegate one focused task at a time (implementation → testing → review → documentation).
 2. Keep `--task` short and specific; place constraints in `--instructions`.
 3. If the task is repo-specific, pass `--working-dir` to scope context.
+
+## codex-delegate skill
+
+This repository ships an installable Codex skill at `.agents/skills/codex-delegate`.
+
+Install with the skill installer:
+
+```bash
+$skill-installer https://github.com/h-arnold/codex-delegate .agents/skills/codex-delegate
+```
+
+Use the skill with a role discovery-first workflow:
+
+1. List roles in the target repository (`codex-delegate --list-roles --working-dir "$PWD"`).
+2. Choose the best role from the discovered list.
+3. Run delegation with clear scope, constraints, and validation steps.
+4. For non-trivial changes, run implementation → review → implementation loops until clean.
+
+If you need the underlying Codex skill model and packaging reference, see:
+<https://developers.openai.com/codex/skills/>
+
+## Skill wrapper script
+
+The repository skill includes `.agents/skills/codex-delegate/scripts/run_delegate.sh` for a
+consistent invocation pattern. It resolves `codex-delegate` from `PATH`, falling back to a local
+`bin/codex-delegate.js` in the supplied working directory, and defaults `timeout_minutes` to `10`.
+
+```bash
+scripts/run_delegate.sh "<role>" "<task>" "<working_dir>" "<instructions>" 10
+```
